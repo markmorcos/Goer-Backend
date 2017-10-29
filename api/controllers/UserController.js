@@ -7,6 +7,7 @@ var jwt = require('jsonwebtoken');
 var multer  = require('multer');
 
 var fs = require('../../util/fs');
+var constants = require('../../util/constants');
 
 exports.signIn = function(req, res) {
   if (!req.body.email) return res.json({ success: false, message: 'Email is required' });
@@ -85,7 +86,7 @@ function populateUser(req, res, next) {
     const ext = req.file.originalname.split('.').pop();
     const path = `${directory}/${user._id}.${ext}`;
     fs.move(req.file.path, path);
-    user.picture = `http://18.221.103.200/${path}`;
+    user.picture = `${constants.url}${path}`;
     next(user);
   } else {
     next(user);
@@ -208,7 +209,7 @@ exports.update = function(req, res) {
     const ext = req.file.originalname.split('.').pop();
     const path = `${directory}/${user._id}.${ext}`;
     fs.move(req.file.path, path);
-    user.picture = `http://18.221.103.200/${path}`;
+    user.picture = `${constants.url}${path}`;
   } else {
     user.picture = user.picture === undefined ? user.picture : req.body.picture;
   }
