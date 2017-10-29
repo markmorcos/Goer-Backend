@@ -39,43 +39,43 @@ function verifyToken(req, res, next) {
 }
 
 app.post(
-  '/api/sign-up',
+  '/sign-up',
   upload.single('picture'),
   users.validateNewUser,
   users.signUp
 );
-app.post('/api/sign-in', users.signIn);
-app.get('/api/profile', verifyToken, users.read);
+app.post('/sign-in', users.signIn);
+app.get('/profile', verifyToken, users.read);
 app.put(
-  '/api/profile',
+  '/profile',
   upload.single('picture'),
   verifyToken,
   users.validateExistingUser,
   users.update
 );
-app.post('/api/reset-password', verifyToken, users.resetPassword);
+app.post('/reset-password', verifyToken, users.resetPassword);
 
-app.post('/api/user', upload.single('picture'), verifyToken, users.create);
-app.get('/api/user', verifyToken, users.read);
-app.get('/api/users', users.index);
-app.put('/api/user',
+app.post('/user', upload.single('picture'), verifyToken, users.create);
+app.get('/user', verifyToken, users.read);
+app.get('/users', users.index);
+app.put('/user',
   upload.single('picture'),
   verifyToken,
   users.validateExistingUser,
   users.update
 );
-app.delete('/api/user', verifyToken, users.delete);
+app.delete('/user', verifyToken, users.delete);
 
-app.get('/api/preferences', preferences.index);
-app.post('/api/preference', verifyToken, preferences.create);
-app.put('/api/preference', verifyToken, preferences.update);
-app.delete('/api/preference', verifyToken, preferences.delete);
+app.get('/preferences', preferences.index);
+app.post('/preference', verifyToken, preferences.create);
+app.put('/preference', verifyToken, preferences.update);
+app.delete('/preference', verifyToken, preferences.delete);
 
-app.get('/api/follows', verifyToken, follows.list);
-app.post('/api/follow', verifyToken, follows.follow);
-app.put('/api/accept', verifyToken, follows.accept);
-app.delete('/api/reject', verifyToken, follows.reject);
-app.delete('/api/delete', verifyToken, follows.delete);
+app.get('/follows', verifyToken, follows.list);
+app.post('/follow', verifyToken, follows.follow);
+app.put('/accept', verifyToken, follows.accept);
+app.delete('/reject', verifyToken, follows.reject);
+app.delete('/delete', verifyToken, follows.delete);
 
 app.use('/uploads', express.static('uploads'));
 
