@@ -5,26 +5,30 @@ var User = mongoose.model('User');
 var bcrypt = require('bcrypt');
 var jwt = require('jsonwebtoken');
 var multer  = require('multer');
+var nodemailer = require('nodemailer');
 
 var fs = require('../../util/fs');
 var constants = require('../../util/constants');
 
-exports.signIn = function(req, res) {
-  if (!req.body.email) return res.json({ success: false, message: 'Email is required' });
-  if (!req.body.password) return res.json({ success: false, message: 'Password is required' });
-  User.findOne({ email: req.body.email }, function(err, user) {
-    if (err) return res.send(err);
-    if (!user) return res.json({ success: false, message: 'Incorrect email or password' });
-    if (!user.confirmed) return res.json({ success: false, message: 'Account not confirmed yet' });
-    if (!user.approved) return res.json({ success: false, message: 'Account not approved yet' });
-    bcrypt.compare(req.body.password, user.password, function(err, match) {
-      if (!match) return res.json({ success: false, message: 'Incorrect email or password' });
-      if (err) return res.send(err);
-      var token = jwt.sign(user.toObject(), 'secret');
-      res.json({ success: true, user: user, token: token });
-    });
+function sendEmail(to, subject, html, text, next) {
+  var transporter = nodemailer.createTransport({
+    service: 'Gmail',
+    auth: {
+      user: 'mark.yehia@gmail.com',
+      pass: ''
+    }
   });
-};
+  var mailOptions = {
+    from: 'mark.yehia@gmail.com',
+    to: to,
+    subject: subject,
+    html: html,
+    text: text
+  };
+  transporter.sendMail(mailOptions, function(error, info) {
+    next(error, info);
+  });
+}
 
 function generateNumber(length) {
   var min = Math.pow(10, length - 1);
@@ -33,29 +37,41 @@ function generateNumber(length) {
 }
 
 exports.validateNewUser = function(req, res, next) {
-  var valid = req.body.email && req.body.password;
-  if (!req.body.email) res.json({ success: false, message: 'Email is required' });
-  if (!req.body.password) res.json({ success: false, message: 'Password is required' });
-  switch (req.body.role) {
-    case 'admin':
-    case 'manager':
-      break;
-    case 'business':
-      valid = valid && req.body.name && req.body.phone && req.body.latitude && req.body.longitude;
-      if (!req.body.name) res.json({ success: false, message: 'Name is required' });
-      if (!req.body.phone) res.json({ success: false, message: 'Phone is required' });
-      if (!req.body.latitude || !req.body.longitude) {
-        return res.json({ success: false, message: 'Location is required' });
-      }
-      break;
-    default:
-      valid = valid && req.body.firstName && req.body.lastName;
-      if (!req.body.firstName) res.json({ success: false, message: 'First name is required' });
-      if (!req.body.lastName) res.json({ success: false, message: 'Last name is required' });
-      break;
-  }
-  if (valid) return next();
-  fs.delete(req.file.path);    
+  var valid = true;
+  if (!req.body.email) valid = false, res.json({ success: false, message: 'Email is required' });
+  User.findOne({ email: req.body.email }, function(err, user) {
+    if (valid && err) valid = false, res.send(err);
+    if (valid && user) valid = false, res.json({ success: false, message: 'Email is already taken' });
+    if (valid && !req.body.password) {
+      valid = false, res.json({ success: false, message: 'Password is required' });
+    }
+    switch (req.body.role) {
+      case 'admin':
+      case 'manager':
+        break;
+      case 'business':
+        if (valid && !req.body.name) {
+          valid = false, res.json({ success: false, message: 'Name is required' });
+        }
+        if (valid && !req.body.phone) {
+          valid = false, res.json({ success: false, message: 'Phone is required' });
+        }
+        if (valid && (!req.body.latitude || !req.body.longitude)) {
+          valid = false, res.json({ success: false, message: 'Location is required' });
+        }
+        break;
+      default:
+        if (valid && !req.body.firstName) {
+          valid = false, res.json({ success: false, message: 'First name is required' });
+        }
+        if (valid && !req.body.lastName) {
+          valid = false, res.json({ success: false, message: 'Last name is required' });
+        }
+        break;
+    }
+    if (valid) return next();
+    if (req.file) fs.delete(req.file.path);
+  });
 }
 
 function populateUser(req, res, next) {
@@ -93,25 +109,217 @@ function populateUser(req, res, next) {
   }
 }
 
+function sendConfirmation(user, next) {
+  sendEmail(
+    user.email,
+    'Goer',
+    `Your confirmation code is ${user.confirmation}.`,
+    `Your confirmation code is ${user.confirmation}.`,
+    function (err, info) {
+      next(err, info);
+    }
+  );
+}
+
+/**
+ * @api {post} /api/sign-up Sign up new user
+ * @apiName SignUp
+ * @apiGroup User
+ *
+ * @apiParam {File} picture picture (Optional)
+ * @apiParam {String} email Email
+ * @apiParam {String} password Password
+ * @apiParam {String} phone Phone (Optional in users only)
+ * @apiParam {String} description Description (Optional)
+ * @apiParam {String} language Language; en or ar (Optional, default: en)
+ * @apiParam {String} facebook (Optional)
+ * @apiParam {String} instagram (Optional)
+ * @apiParam {String} firstName User first name (user only)
+ * @apiParam {String} lastName User last name (user only)
+ * @apiParam {String} gender User gender; male or female (Optional, default: male, user only)
+ * @apiParam {Boolean} private Private; true or false (Optional, default: false, user only)
+ * @apiParam {String} birthdate User birthdate (user only)
+ * @apiParam {String} name Business name (business only)
+ * @apiParam {Object} location Business location; latitude and longitude (business only)
+ * @apiParam {String} role Role; user, business, manager or admin (Optional, default: user)
+ *
+ * @apiSuccess {Boolean} success true
+ * @apiSuccess {Object} user Signed up user details
+ * @apiSuccess {String} token Authentication token
+ *
+ * @apiError {Boolean} success false
+ * @apiError {String} message Error message
+ */
 exports.signUp = function(req, res) {
   populateUser(req, res, function(user) {
     user.save(function(err, user) {
       if (err) return res.send(err);
-      // TODO send confirmation email
-      res.json({ success: true, user: user });
+      sendConfirmation(user, function(err, info) {
+        if (err) return res.send(err);
+        res.json({ success: true, user: user });
+      });
     });
   });
 };
 
-exports.resetPassword = function(req, res) {
-  if (!req.body.id) return res.json({ success: false, message: 'User ID is required' });  
+/**
+ * @api {post} /api/resend-confirmation Resend confirmation code to new user
+ * @apiName ResendConfirmation
+ * @apiGroup User
+ *
+ * @apiParam {String} id User ID
+ *
+ * @apiSuccess {Boolean} success true
+ *
+ * @apiError {Boolean} success false
+ * @apiError {String} message Error message
+ */
+exports.resendConfirmation = function(req, res) {
+  if (!req.body.id) return res.json({ success: false, message: 'ID is required' });
   User.findById(req.body.id, function(err, user) {
-    const newPassword = generateNumber(8);
+    if (err) return res.send(err);
+    if (!user) return res.json({ success: false, message: 'User not found' });
+    sendConfirmation(user, function(err, info) {
+      if (err) return res.send(err);
+      res.json({ success: true });
+    });
+  });
+}
+
+/**
+ * @api {post} /api/confirm-user Resend confirmation code to new user
+ * @apiName ConfirmUser
+ * @apiGroup User
+ *
+ * @apiParam {String} id User ID
+ * @apiParam {String} confirmation Confirmation code
+ *
+ * @apiSuccess {Boolean} success true
+ *
+ * @apiError {Boolean} success false
+ * @apiError {String} message Error message
+ */
+exports.confirmUser = function(req, res) {
+  if (!req.body.id) return res.json({ success: false, message: 'ID is required' });
+  if (!req.body.confirmation) return res.json({ success: false, message: 'Confirmation code is required' });
+  User.findById(req.body.id, function(err, user) {
+    if (err) return res.send(err);
+    if (!user) return res.json({ success: false, message: 'User not found' });
+    if (user.confirmed) return res.json({ success: false, message: 'User already confirmed' });
+    if (req.body.confirmation !== user.confirmation) {
+      return res.json({ success: false, message: 'Invalid confirmation code' });
+    }
+    user.confirmed = true;
+    user.save(function(err, user) {
+      if (err) return res.send(err);
+      res.json({ success: true });
+    });
+  });
+}
+
+/**
+ * @api {post} /api/sign-in Sign in existing user
+ * @apiName SignIn
+ * @apiGroup User
+ *
+ * @apiParam {String} email User email
+ * @apiParam {String} password User password
+ *
+ * @apiSuccess {Boolean} success true
+ * @apiSuccess {Object} user Signed in user details
+ * @apiSuccess {String} token Authentication token
+ *
+ * @apiError {Boolean} success false
+ * @apiError {String} message Error message
+ */
+exports.signIn = function(req, res) {
+  if (!req.body.email) return res.json({ success: false, message: 'Email is required' });
+  if (!req.body.password) return res.json({ success: false, message: 'Password is required' });
+  User.findOne({ email: req.body.email }, function(err, user) {
+    if (err) return res.send(err);
+    if (!user) return res.json({ success: false, message: 'Incorrect email or password' });
+    if (!user.confirmed) return res.json({ success: false, message: 'Account not confirmed yet' });
+    if (!user.approved) return res.json({ success: false, message: 'Account not approved yet' });
+    bcrypt.compare(req.body.password, user.password, function(err, match) {
+      if (!match) return res.json({ success: false, message: 'Incorrect email or password' });
+      if (err) return res.send(err);
+      var token = jwt.sign(user.toObject(), 'secret');
+      res.json({ success: true, user: user, token: token });
+    });
+  });
+};
+
+/**
+ * @api {post} /api/contact-business Contact business by email
+ * @apiName ContactBusiness
+ * @apiGroup User
+ *
+ * @apiParam {String} token Authentication token
+ * @apiParam {String} id Business ID
+ * @apiParam {String} message User message
+ *
+ * @apiSuccess {Boolean} success true
+ *
+ * @apiError {Boolean} success false
+ * @apiError {String} message Error message
+ */
+exports.contactBusiness = function(req, res) {
+  if (!req.body.id) return res.json({ success: false, message: 'ID is required' });
+  if (!req.body.message) return res.json({ success: false, message: 'Message is required' });
+  User.findById(req.body.id, function(err, user) {
+    if (err) return res.send(err);
+    if (!user || user.role !== 'business') {
+      return res.json({ success: false, message: 'Business not found' });
+    }
+    sendEmail(
+      user.email,
+      'Goer',
+      `Message from ${req.decoded.firstName} ${req.decoded.lastName}<br>
+      Email: ${req.decoded.email}<br>
+      Message: ${req.body.message}`,
+      `Message from ${req.decoded.firstName} ${req.decoded.lastName}
+Email: ${req.decoded.email}
+Message: ${req.body.message}`,
+      function (err, info) {
+        if (err) return res.send(err);
+        res.json({ success: true });
+      }
+    );
+  });
+}
+
+/**
+ * @api {post} /api/reset-password Reset user password by email
+ * @apiName ResetPassword
+ * @apiGroup User
+ *
+ * @apiParam {String} token Authentication token
+ * @apiParam {String} email User email
+ *
+ * @apiSuccess {Boolean} success true
+ *
+ * @apiError {Boolean} success false
+ * @apiError {String} message Error message
+ */
+exports.resetPassword = function(req, res) {
+  if (!req.body.email) return res.json({ success: false, message: 'Email is required' });
+  User.findOne({ email: req.body.email }, function(err, user) {
+    if (!user) return res.json({ success: false, message: 'User not found' });
+    const newPassword = String(generateNumber(8));
     user.password = bcrypt.hashSync(newPassword, 10);
     user.save(function(err, user) {
       if (err) return res.send(err);
-      // TODO send confirmation email
-      res.json({ success: true, user: user });
+      sendEmail(
+        user.email,
+        'Goer',
+        `Your new password is ${newPassword}.`,
+        `Your new password is ${newPassword}.`,
+        function (err, info) {
+          if (err) return res.send(err);
+          var token = jwt.sign(user.toObject(), 'secret');
+          res.json({ success: true });
+        }
+      );
     });
   });
 }
@@ -123,14 +331,42 @@ exports.index = function(req, res) {
   });
 };
 
+/**
+ * @api {post} /api/user Create new user (Admin only)
+ * @apiName CreateUser
+ * @apiGroup User
+ *
+ * @apiParam {File} picture picture (Optional)
+ * @apiParam {String} email Email
+ * @apiParam {String} password Password
+ * @apiParam {String} phone Phone (Optional in users only)
+ * @apiParam {String} description Description (Optional)
+ * @apiParam {String} language Language; en or ar (Optional, default: en)
+ * @apiParam {String} facebook (Optional)
+ * @apiParam {String} instagram (Optional)
+ * @apiParam {String} firstName User first name (user only)
+ * @apiParam {String} lastName User last name (user only)
+ * @apiParam {String} gender User gender; male or female (Optional, default: male, user only)
+ * @apiParam {Boolean} private Private; true or false (Optional, default: false, user only)
+ * @apiParam {String} birthdate User birthdate (user only)
+ * @apiParam {String} name Business name (business only)
+ * @apiParam {Object} location Business location; latitude and longitude (business only)
+ * @apiParam {String} role Role; user, business, manager or admin (Optional, default: user)
+ *
+ * @apiSuccess {Boolean} success true
+ * @apiSuccess {Object} user Signed up user details
+ * @apiSuccess {String} token Authentication token
+ *
+ * @apiError {Boolean} success false
+ * @apiError {String} message Error message
+ */
 exports.create = function(req, res) {
   if (req.decoded.role !== 'admin') {
     return res.json({ success: false, message: 'You are not allowed to create users' });
   }
   populateUser(req, res, function(user) {
-    user.approved = true;
     user.confirmed = true;
-    user.role = req.body.role;
+    user.role = req.body.role || 'user';
     user.save(function(err, user) {
       if (err) return res.send(err);
       res.json({ success: true, user: true });
@@ -138,36 +374,87 @@ exports.create = function(req, res) {
   });
 };
 
+function getPrivateUser(user) {
+  const keys = ['picture', 'name', 'email'];
+  const newUser = {};
+  keys.forEach(function(key) {
+    newUser[key] = user[key];
+  });
+  return newUser;
+}
+
+/**
+ * @api {get} /api/user Read user profile
+ * @apiName ReadUser
+ * @apiGroup User
+ *
+ * @apiParam {String} token Authentication token
+ * @apiParam {String} id User ID
+ *
+ * @apiSuccess {Boolean} success true
+ * @apiSuccess {Object} user User details
+ *
+ * @apiError {Boolean} success false
+ * @apiError {String} message Error message
+ */
 exports.read = function(req, res) {
   if (!req.query.id) return res.json({ success: false, message: 'User ID is required' });
   User.findById(req.query.id, function(err, user) {
     if (err) return res.send(err);
     if (!user) return res.json({ success: false, message: 'User not found' });
-    if (req.decoded.role !== 'admin' && req.decoded._id != user._id) {
-      return res.json({ success: false, message: 'You are not allowed to read this user' });
+    if (req.decoded.role !== 'admin' && user.private) {
+      return res.json({ success: true, user: getPrivateUser(user.toObject()) });
     }
     res.json({ success: true, user: user });
   });
 };
 
 exports.validateExistingUser = function(req, res, next) {
-  var valid = req.body.id;
-  if (!req.body.id) res.json({ success: false, message: 'User ID is required' });  
-  User.findById(req.body.id, function(err, user) {
-    valid = valid && !err && user && (req.decoded.role === 'admin' || req.decoded._id == user._id);
-    if (err) res.send(err);
-    if (!user) res.json({ success: false, message: 'User not found' });
-    if (req.decoded.role !== 'admin' && req.decoded._id != user._id) {
-      res.json({ success: false, message: 'You are not allowed to update this user' });
+  var valid = true;
+  User.findById(req.body.id || req.decoded._id, function(err, user) {
+    if (valid && err) valid = false, res.send(err);
+    if (valid && !user) valid = false, res.json({ success: false, message: 'User not found' });
+    if (valid && req.decoded.role !== 'admin' && req.decoded._id != user._id) {
+      valid = false, res.json({ success: false, message: 'You are not allowed to update this user' });
     }
     if (valid) {
       req.user = user;
       return next();
     }
-    fs.delete(req.file.path);
+    if (req.file) fs.delete(req.file.path);
   });  
 }
 
+/**
+ * @api {put} /api/user Update existing user
+ * @apiName UpdateUser
+ * @apiGroup User
+ *
+ * @apiParam {String} token Authentication token
+ * @apiParam {String} id User ID (Optional, default: signed in user ID)
+ * @apiParam {File} picture picture (Optional)
+ * @apiParam {String} email Email (Optional)
+ * @apiParam {String} password Password (Optional)
+ * @apiParam {String} phone Phone (Optional)
+ * @apiParam {String} description Description (Optional)
+ * @apiParam {String} language Language; en or ar (Optional, default: en)
+ * @apiParam {String} facebook (Optional)
+ * @apiParam {String} instagram (Optional)
+ * @apiParam {String} firstName User first name (Optional, user only)
+ * @apiParam {String} lastName User last name (Optional, user only)
+ * @apiParam {String} gender User gender; male or female (Optional, default: male, user only)
+ * @apiParam {Boolean} private Private; true or false (Optional, default: false, user only)
+ * @apiParam {String} birthdate User birthdate (Optional, user only)
+ * @apiParam {String} name Business name (Optional, business only)
+ * @apiParam {Object} location Business location; latitude and longitude (Optional, business only)
+ * @apiParam {String} role Role; user, business, manager or admin (Optional, default: user)
+ *
+ * @apiSuccess {Boolean} success true
+ * @apiSuccess {Object} user Updated user details
+ *
+ * @apiError {Boolean} success false
+ * @apiError {String} message Error message
+ */
 exports.update = function(req, res) {
   const user = req.user;
   if (req.decoded.role === 'admin') {
@@ -219,6 +506,19 @@ exports.update = function(req, res) {
   });
 };
 
+/**
+ * @api {delete} /api/user Delete existing user
+ * @apiName DeleteUser
+ * @apiGroup User
+ *
+ * @apiParam {String} token Authentication token
+ * @apiParam {String} id User ID
+ *
+ * @apiSuccess {Boolean} success true
+ *
+ * @apiError {Boolean} success false
+ * @apiError {String} message Error message
+ */
 exports.delete = function(req, res) {
   if (req.decoded.role !== 'admin' || req.decoded._id == req.body.id) {
     return res.json({ success: false, message: 'You are not allowed to delete this user' });

@@ -38,24 +38,27 @@ function verifyToken(req, res, next) {
   }
 }
 
+app.all('*', function(req, res, next) {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  res.header("Access-Control-Allow-Methods","PUT,POST,GET,DELETE,OPTIONS");
+  res.header("Content-Type", "application/json;charset=utf-8");
+  next();
+});
+
 app.post(
   '/api/sign-up',
   upload.single('picture'),
   users.validateNewUser,
   users.signUp
 );
+app.post('/api/resend-confirmation', users.resendConfirmation);
+app.post('/api/confirm-user', users.confirmUser);
 app.post('/api/sign-in', users.signIn);
-app.get('/api/profile', verifyToken, users.read);
-app.put(
-  '/api/profile',
-  upload.single('picture'),
-  verifyToken,
-  users.validateExistingUser,
-  users.update
-);
-app.post('/api/reset-password', verifyToken, users.resetPassword);
+app.post('/api/contact-business', verifyToken, users.contactBusiness);
+app.post('/api/reset-password', users.resetPassword);
 
-app.post('/api/user', upload.single('picture'), verifyToken, users.create);
+app.post('/api/user', upload.single('picture'), verifyToken, users.validateNewUser, users.create);
 app.get('/api/user', verifyToken, users.read);
 app.get('/api/users', users.index);
 app.put('/api/user',
@@ -75,7 +78,7 @@ app.get('/api/follows', verifyToken, follows.list);
 app.post('/api/follow', verifyToken, follows.follow);
 app.put('/api/accept', verifyToken, follows.accept);
 app.delete('/api/reject', verifyToken, follows.reject);
-app.delete('/api/delete', verifyToken, follows.delete);
+app.delete('/api/unfollow', verifyToken, follows.delete);
 
 app.use('/uploads', express.static('uploads'));
 

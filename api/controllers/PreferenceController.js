@@ -3,13 +3,38 @@
 var mongoose = require('mongoose');
 var Preference = mongoose.model('Preference');
 
+/**
+ * @api {get} /api/preferences Read all preferences
+ * @apiName ReadPreferences
+ * @apiGroup Preference
+ *
+ * @apiSuccess {Boolean} success true
+ * @apiSuccess {Array} preferences List of preferences
+ *
+ * @apiError {Boolean} success false
+ * @apiError {String} message Error message
+ */
 exports.index = function(req, res) {
-  Preference.find({}).sort('name').exec(function(err, preference) {
+  Preference.find({}).sort('name').exec(function(err, preferences) {
     if (err) return res.send(err);
-    res.json({ success: true, preference: preference });
+    res.json({ success: true, preferences: preferences });
   });
 };
 
+/**
+ * @api {post} /api/preference Create new preference (Admin and manager only)
+ * @apiName CreatePreference
+ * @apiGroup Preference
+ *
+ * @apiParam {String} token Authentication token
+ * @apiParam {String} name Preference name
+ *
+ * @apiSuccess {Boolean} success true
+ * @apiSuccess {Object} preference Preference created
+ *
+ * @apiError {Boolean} success false
+ * @apiError {String} message Error message
+ */
 exports.create = function(req, res) {
   if (req.decoded.role !== 'admin' && req.decoded.role !== 'manager') {
     return res.json({ success: false, message: 'You are not allowed to create preferences' });
@@ -22,6 +47,20 @@ exports.create = function(req, res) {
   });
 };
 
+/**
+ * @api {put} /api/preference Update existing preference (Admin and manager only)
+ * @apiName UpdatePreference
+ * @apiGroup Preference
+ *
+ * @apiParam {String} token Authentication token
+ * @apiParam {String} name Preference name (Optional)
+ *
+ * @apiSuccess {Boolean} success true
+ * @apiSuccess {Object} preference Preference updated
+ *
+ * @apiError {Boolean} success false
+ * @apiError {String} message Error message
+ */
 exports.update = function(req, res) {
   if (req.decoded.role !== 'admin' && req.decoded.role !== 'manager') {
     return res.json({ success: false, message: 'You are not allowed to update this preference' });
@@ -37,6 +76,19 @@ exports.update = function(req, res) {
   });
 };
 
+/**
+ * @api {delete} /api/preference Delete existing preference (Admin and manager only)
+ * @apiName DeletePreference
+ * @apiGroup Preference
+ *
+ * @apiParam {String} token Authentication token
+ * @apiParam {String} id Preference ID
+ *
+ * @apiSuccess {Boolean} success true
+ *
+ * @apiError {Boolean} success false
+ * @apiError {String} message Error message
+ */
 exports.delete = function(req, res) {
   if (req.decoded.role !== 'admin' && req.decoded.role !== 'manager') {
     return res.json({ success: false, message: 'You are not allowed to delete this preference' });
