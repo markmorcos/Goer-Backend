@@ -13,10 +13,12 @@ var upload = multer({ dest: './uploads' });
 var User = require('./api/models/User');
 var Preference = require('./api/models/Preference');
 var Follow = require('./api/models/Follow');
+var Notification = require('./api/models/Notification');
 
 var users = require('./api/controllers/UserController');
 var preferences = require('./api/controllers/PreferenceController');
 var follows = require('./api/controllers/FollowController');
+var notifications = require('./api/controllers/NotificationController');
 
 app.use(morgan('dev'));
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -29,8 +31,12 @@ function verifyToken(req, res, next) {
   		if (err) {
         return res.json({ success: false, message: 'Authentication failed' });
   		} else {
-        req.decoded = decoded;
-        next();
+        User.findById(decoded._id, function(err, user) {
+          if (err) return res.send(err);
+          if (!user) return res.json({ success: false, message: 'Authentication failed' });      
+          req.decoded = decoded;
+          next();
+        });
   		}
   	});
   } else {
@@ -69,7 +75,7 @@ app.put('/api/user',
 );
 app.delete('/api/user', verifyToken, users.delete);
 
-app.get('/api/preferences', preferences.index);
+app.get('/api/preferences', preferences.list);
 app.post('/api/preference', verifyToken, preferences.create);
 app.put('/api/preference', verifyToken, preferences.update);
 app.delete('/api/preference', verifyToken, preferences.delete);
@@ -79,6 +85,8 @@ app.post('/api/follow', verifyToken, follows.follow);
 app.put('/api/accept', verifyToken, follows.accept);
 app.delete('/api/reject', verifyToken, follows.reject);
 app.delete('/api/unfollow', verifyToken, follows.delete);
+
+app.get('/api/notifications', verifyToken, notifications.list);
 
 app.use('/uploads', express.static('uploads'));
 

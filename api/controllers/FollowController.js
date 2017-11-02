@@ -2,6 +2,7 @@
 
 var mongoose = require('mongoose');
 var Follow = mongoose.model('Follow');
+var Notification = mongoose.model('Notification');
 
 /**
  * @api {get} /api/follows Read all follows
@@ -67,7 +68,15 @@ exports.follow = function(req, res) {
     var newFollow = new Follow({ follower: req.decoded._id, followee: req.body.id });
     newFollow.save(function(err, follow) {
       if (err) return res.send(err);
-      res.json({ success: true });
+      Notification.create({
+        type: 'follow',
+        sender: req.decoded._id,
+        receiver: req.body.id
+      }, function(err, notification) {
+        if (err) return res.send(err);
+        // TODO send push notification
+        res.json({ success: true });
+      })  
     });
   });
 };
@@ -98,7 +107,15 @@ exports.accept = function(req, res) {
     follow.status = 'accepted';
     follow.save(function(err, follow) {
       if (err) return res.send(err);
-      res.json({ success: true });
+      Notification.create({
+        type: 'accept',
+        sender: req.decoded._id,
+        receiver: req.body.id
+      }, function(err, notification) {
+        if (err) return res.send(err);
+        // TODO send push notification
+        res.json({ success: true });
+      })  
     });
   });
 };

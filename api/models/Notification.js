@@ -3,16 +3,16 @@
 var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 
-var Comment = new Schema({
-  user: {
+var Notification = new Schema({
+  type: String,
+  sender: {
     type: Schema.Types.ObjectId,
     ref: 'User'
   },
-  post: {
+  receiver: {
     type: Schema.Types.ObjectId,
-    ref: 'Post'
-  },
-  text: String
+    ref: 'User'
+  }
 }, { timestamps: true });
 
-module.exports = mongoose.model('Comment', Comment);
+module.exports = mongoose.model('Notification', Notification);

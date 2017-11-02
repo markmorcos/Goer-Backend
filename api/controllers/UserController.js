@@ -7,15 +7,15 @@ var jwt = require('jsonwebtoken');
 var multer  = require('multer');
 var nodemailer = require('nodemailer');
 
-var fs = require('../../util/fs');
-var constants = require('../../util/constants');
+var fs = require('../util/fs');
+var constants = require('../util/constants');
 
 function sendEmail(to, subject, html, text, next) {
   var transporter = nodemailer.createTransport({
     service: 'Gmail',
     auth: {
       user: 'mark.yehia@gmail.com',
-      pass: ''
+      pass: 'Ntldrdll2971993,'
     }
   });
   var mailOptions = {

@@ -14,7 +14,7 @@ var Preference = mongoose.model('Preference');
  * @apiError {Boolean} success false
  * @apiError {String} message Error message
  */
-exports.index = function(req, res) {
+exports.list = function(req, res) {
   Preference.find({}).sort('name').exec(function(err, preferences) {
     if (err) return res.send(err);
     res.json({ success: true, preferences: preferences });
