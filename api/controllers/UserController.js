@@ -187,7 +187,7 @@ exports.resendConfirmation = function(req, res) {
 }
 
 /**
- * @api {post} /api/confirm-user Resend confirmation code to new user
+ * @api {post} /api/confirm-user Confirm new user
  * @apiName ConfirmUser
  * @apiGroup User
  *
@@ -507,7 +507,7 @@ exports.update = function(req, res) {
 };
 
 /**
- * @api {delete} /api/user Delete existing user
+ * @api {delete} /api/user Delete existing user (Admin only)
  * @apiName DeleteUser
  * @apiGroup User
  *
