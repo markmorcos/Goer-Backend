@@ -58,7 +58,7 @@ app.post('/deploy', function (req, res) {
     console.log('Child process exited with code ' + code);
   });
 
-  res.json(200, { message: 'Github Hook received!' });
+  res.json(200, { message: 'Bitbucket Hook received!' });
 });
 
 app.all('*', function(req, res, next) {
