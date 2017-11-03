@@ -8,7 +8,7 @@ var connection = mongoose.connect('mongodb://localhost/goer', { useMongoClient: 
 var bodyParser = require('body-parser');
 var jwt = require('jsonwebtoken');
 var multer  = require('multer');
-var upload = multer({ dest: './uploads' });
+var upload = multer({ dest: './public/uploads' });
 
 var User = require('./api/models/User');
 var Preference = require('./api/models/Preference');
@@ -43,6 +43,7 @@ function verifyToken(req, res, next) {
   	return res.json({ success: false, message: 'Authentication failed' });
   }
 }
+app.use(express.static('public'));
 
 app.all('*', function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
@@ -87,8 +88,6 @@ app.delete('/api/reject', verifyToken, follows.reject);
 app.delete('/api/unfollow', verifyToken, follows.delete);
 
 app.get('/api/notifications', verifyToken, notifications.list);
-
-app.use('/uploads', express.static('uploads'));
 
 app.use(function(req, res) {
   return res.status(404).send({ error: req.originalUrl + ' not found' })

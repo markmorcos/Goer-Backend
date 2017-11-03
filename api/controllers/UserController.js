@@ -98,7 +98,7 @@ function populateUser(req, res, next) {
   });
   if (req.file) {
     const directory = 'uploads/users/picture';
-    fs.mkdir(directory);
+    fs.mkdir(`public/${directory}`);
     const ext = req.file.originalname.split('.').pop();
     const path = `${directory}/${user._id}.${ext}`;
     fs.move(req.file.path, path);
@@ -492,7 +492,7 @@ exports.update = function(req, res) {
   }
   if (req.file) {
     const directory = 'uploads/users/picture';
-    fs.mkdir(directory);
+    fs.mkdir(`public/${directory}`);
     const ext = req.file.originalname.split('.').pop();
     const path = `${directory}/${user._id}.${ext}`;
     fs.move(req.file.path, path);
