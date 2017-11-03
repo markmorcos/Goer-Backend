@@ -46,21 +46,28 @@ function verifyToken(req, res, next) {
 }
 app.use(express.static('public'));
 
-app.get('/deploy', function(req, res) {
-  exec('./public/deploy.sh', function(err, stdout, stderr) {
-    if (err) return res.send(err);
-    if (stderr) return res.send(stderr);
-    res.send(stdout);
+app.post('/deploy', function (req, res) {
+  var spawn = require('child_process').spawn;
+  var deploy = spawn('sh', ['./public/deploy.sh']);
+
+  deploy.stdout.on('data', function (data) {
+    console.log('' +  data);
   });
+
+  deploy.on('close', function (code) {
+    console.log('Child process exited with code ' + code);
+  });
+
+  res.json(200, { message: 'Github Hook received!' });
 });
 
-// app.all('*', function(req, res, next) {
-//   res.header("Access-Control-Allow-Origin", "*");
-//   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-//   res.header("Access-Control-Allow-Methods","PUT,POST,GET,DELETE,OPTIONS");
-//   res.header("Content-Type", "application/json;charset=utf-8");
-//   next();
-// });
+app.all('*', function(req, res, next) {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  res.header("Access-Control-Allow-Methods","PUT,POST,GET,DELETE,OPTIONS");
+  res.header("Content-Type", "application/json;charset=utf-8");
+  next();
+});
 
 app.post(
   '/api/sign-up',
