@@ -1,6 +1,4 @@
-deploy.sh
-apidoc.json
-docs
+public
 
 # Logs
 logs
