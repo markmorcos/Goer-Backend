@@ -97,10 +97,10 @@ function populateUser(req, res, next) {
     instagram: req.body.instagram
   });
   if (req.file) {
-    const directory = 'uploads/users/picture';
+    const directory = `uploads/users/${user._id}/picture`;
     fs.mkdir(`public/${directory}`);
     const ext = req.file.originalname.split('.').pop();
-    const path = `${directory}/${user._id}.${ext}`;
+    const path = `public/${directory}/0.${ext}`;
     fs.move(req.file.path, path);
     user.picture = `${constants.url}${path}`;
     next(user);
@@ -491,10 +491,10 @@ exports.update = function(req, res) {
       break;
   }
   if (req.file) {
-    const directory = 'uploads/users/picture';
+    const directory = `uploads/users/${user._id}/picture`;
     fs.mkdir(`public/${directory}`);
     const ext = req.file.originalname.split('.').pop();
-    const path = `${directory}/${user._id}.${ext}`;
+    const path = `public/${directory}/0.${ext}`;
     fs.move(req.file.path, path);
     user.picture = `${constants.url}${path}`;
   } else {
