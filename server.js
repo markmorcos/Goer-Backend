@@ -9,6 +9,7 @@ var bodyParser = require('body-parser');
 var jwt = require('jsonwebtoken');
 var multer  = require('multer');
 var upload = multer({ dest: './public/uploads' });
+var exec = require('child_process').exec;
 
 var User = require('./api/models/User');
 var Preference = require('./api/models/Preference');
@@ -44,6 +45,14 @@ function verifyToken(req, res, next) {
   }
 }
 app.use(express.static('public'));
+
+app.get('/deploy', function(req, res) {
+  exec('./public/deploy.sh', function(err, stdout, stderr) {
+    if (err) return res.send(err);
+    if (stderr) return res.send(stderr);
+    res.send(stdout);
+  });
+});
 
 app.all('*', function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
