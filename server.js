@@ -78,6 +78,7 @@ app.post(
 app.post('/api/resend-confirmation', users.resendConfirmation);
 app.post('/api/confirm-user', users.confirmUser);
 app.post('/api/sign-in', users.signIn);
+app.post('/api/facebook-sign-in', users.facebookSignIn);
 app.post('/api/contact-business', verifyToken, users.contactBusiness);
 app.post('/api/reset-password', users.resetPassword);
 

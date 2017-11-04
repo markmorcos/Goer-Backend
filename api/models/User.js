@@ -29,7 +29,7 @@ var User = new Schema({
   description: String,
   language: {
     type: String,
-    enum: ['en', 'ar'],
+    enum: ['en', 'in'],
     default: 'en'
   },
   approved: {
@@ -56,5 +56,15 @@ var User = new Schema({
     default: 'user'
   }
 }, { timestamps: true });
+
+User.statics.findOneOrCreate = function findOneOrCreate(condition, doc, callback) {
+  const self = this;
+  this.findOne(condition, function(err, result) {
+    if (result) callback(err, result);
+    else self.create(doc, function(newErr, newResult) {
+      callback(err, newResult);
+    });
+  });
+};
 
 module.exports = mongoose.model('User', User);

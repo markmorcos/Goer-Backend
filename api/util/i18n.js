@@ -17,7 +17,7 @@ exports.en = {
   }
 };
 
-exports.ar = {
+exports.in = {
   follow: {
     title: function(user) {
       return `${user.firstName} ${user.lastName} قام${user.gender === 'male' ? '' : 'ت'} بمتابعتك`;

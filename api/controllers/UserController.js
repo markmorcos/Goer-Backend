@@ -6,6 +6,8 @@ var bcrypt = require('bcrypt');
 var jwt = require('jsonwebtoken');
 var multer  = require('multer');
 var nodemailer = require('nodemailer');
+var axios = require('axios');
+var moment = require('moment');
 
 var fs = require('../util/fs');
 var constants = require('../util/constants');
@@ -247,6 +249,52 @@ exports.signIn = function(req, res) {
       res.json({ success: true, user: user, token: token });
     });
   });
+};
+
+/**
+ * @api {post} /api/facebook-sign-in Sign in existing user
+ * @apiName FacebookSignIn
+ * @apiGroup User
+ *
+ * @apiParam {String} accessToken Facebook user access token
+ *
+ * @apiSuccess {Boolean} success true
+ * @apiSuccess {Object} user Signed in user details
+ * @apiSuccess {String} token Authentication token
+ *
+ * @apiError {Boolean} success false
+ * @apiError {String} message Error message
+ */
+exports.facebookSignIn = function(req, res) {
+  if (!req.body.accessToken) return res.json({ success: false, message: 'Facebook access token is required' });
+  axios
+  .get(`https://graph.facebook.com/me?fields=id,first_name,last_name,email,picture{url},gender,locale,birthday&access_token=${req.body.accessToken}`)
+  .then(function(response) {
+    if (response.data.error) return res.json({ success: false, message: response.data.error.message });
+    const language = response.data.locale.split('_')[0];
+    User.findOneOrCreate({ email: response.data.email }, {
+      firstName: response.data.first_name,
+      lastName: response.data.last_name,
+      email: response.data.email,
+      gender: response.data.gender,
+      birthdate: moment(new Date(response.data.birthday)).format('YYYY-MM-DD'),
+      confirmation: generateNumber(6),
+      language: language === 'en' || language === 'in' ? language : undefined,
+      confirmed: true,
+      facebook: response.data.id,
+      picture: response.data.picture.url
+    }, function (err, user) {
+      if (err) return res.send(err);
+      user.facebook = response.data.id;
+      user.save(function(err, user) {
+        var token = jwt.sign(user.toObject(), 'secret');
+        res.json({ success: true, user: user, token: token });
+      });
+    });
+  })
+  .catch(function(err) {
+    res.json({ success: false, message: err.response.data.error.message });
+  })
 };
 
 /**
