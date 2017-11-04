@@ -48,9 +48,6 @@ exports.validateNewUser = function(req, res, next) {
       valid = false, res.json({ success: false, message: 'Password is required' });
     }
     switch (req.body.role) {
-      case 'admin':
-      case 'manager':
-        break;
       case 'business':
         if (valid && !req.body.name) {
           valid = false, res.json({ success: false, message: 'Name is required' });
@@ -143,7 +140,7 @@ function sendConfirmation(user, next) {
  * @apiParam {String} birthdate User birthdate (user only)
  * @apiParam {String} name Business name (business only)
  * @apiParam {Object} location Business location; latitude and longitude (business only)
- * @apiParam {String} role Role; user, business, manager or admin (Optional, default: user)
+ * @apiParam {String} role Role; user or business (Optional, default: user)
  *
  * @apiSuccess {Boolean} success true
  * @apiSuccess {Object} user Signed up user details
@@ -382,49 +379,6 @@ exports.index = function(req, res) {
   });
 };
 
-/**
- * @api {post} /api/user Create new user (Admin only)
- * @apiName CreateUser
- * @apiGroup User
- *
- * @apiParam {File} picture picture (Optional)
- * @apiParam {String} email Email
- * @apiParam {String} password Password
- * @apiParam {String} phone Phone (Optional in users only)
- * @apiParam {String} description Description (Optional)
- * @apiParam {String} language Language; en or ar (Optional, default: en)
- * @apiParam {String} facebook (Optional)
- * @apiParam {String} instagram (Optional)
- * @apiParam {String} firstName User first name (user only)
- * @apiParam {String} lastName User last name (user only)
- * @apiParam {String} gender User gender; male or female (Optional, default: male, user only)
- * @apiParam {Boolean} private Private; true or false (Optional, default: false, user only)
- * @apiParam {String} birthdate User birthdate (user only)
- * @apiParam {String} name Business name (business only)
- * @apiParam {Object} location Business location; latitude and longitude (business only)
- * @apiParam {String} role Role; user, business, manager or admin (Optional, default: user)
- *
- * @apiSuccess {Boolean} success true
- * @apiSuccess {Object} user Signed up user details
- * @apiSuccess {String} token Authentication token
- *
- * @apiError {Boolean} success false
- * @apiError {String} message Error message
- */
-exports.create = function(req, res) {
-  if (req.decoded.role !== 'admin') {
-    return res.json({ success: false, message: 'You are not allowed to create users' });
-  }
-  populateUser(req, res, function(user) {
-    user.confirmed = true;
-    user.role = req.body.role || 'user';
-    user.save(function(err, user) {
-      if (err) return res.send(err);
-      res.json({ success: true, user: true });
-    });
-  });
-};
-
 function getPrivateUser(user) {
   const keys = ['picture', 'name', 'email'];
   const newUser = {};
@@ -453,7 +407,7 @@ exports.read = function(req, res) {
   User.findById(req.query.id, function(err, user) {
     if (err) return res.send(err);
     if (!user) return res.json({ success: false, message: 'User not found' });
-    if (req.decoded.role !== 'admin' && user.private) {
+    if (user.private) {
       return res.json({ success: true, user: getPrivateUser(user.toObject()) });
     }
     res.json({ success: true, user: user });
@@ -465,7 +419,7 @@ exports.validateExistingUser = function(req, res, next) {
   User.findById(req.body.id || req.decoded._id, function(err, user) {
     if (valid && err) valid = false, res.send(err);
     if (valid && !user) valid = false, res.json({ success: false, message: 'User not found' });
-    if (valid && req.decoded.role !== 'admin' && req.decoded._id != user._id) {
+    if (valid && req.decoded._id != user._id) {
       valid = false, res.json({ success: false, message: 'You are not allowed to update this user' });
     }
     if (valid) {
@@ -498,7 +452,6 @@ exports.validateExistingUser = function(req, res, next) {
  * @apiParam {String} birthdate User birthdate (Optional, user only)
  * @apiParam {String} name Business name (Optional, business only)
  * @apiParam {Object} location Business location; latitude and longitude (Optional, business only)
- * @apiParam {String} role Role; user, business, manager or admin (Optional, default: user)
  *
  * @apiSuccess {Boolean} success true
  * @apiSuccess {Object} user Updated user details
@@ -508,9 +461,6 @@ exports.validateExistingUser = function(req, res, next) {
  */
 exports.update = function(req, res) {
   const user = req.user;
-  if (req.decoded.role === 'admin') {
-    user.approved = req.body.approved || user.approved;
-  }
   user.email = req.body.email || user.email;
   user.password = req.body.password ? bcrypt.hashSync(req.body.password, 10) : user.password;
   user.private = req.body.private || user.private;
@@ -518,10 +468,6 @@ exports.update = function(req, res) {
   user.language = req.body.language || user.language;
   user.phone = req.body.phone || user.phone;
   switch (user.role) {
-    case 'admin':
-      break;
-    case 'manager':
-      break;
     case 'business':
       user.name = req.body.name || user.name;
       user.location = req.body.latitude && req.body.longitude
@@ -554,31 +500,5 @@ exports.update = function(req, res) {
   user.save(function(err, user) {
     if (err) return res.send(err);
     res.json({ success: true, user: user });
-  });
-};
-
-/**
- * @api {delete} /api/user Delete existing user (Admin only)
- * @apiName DeleteUser
- * @apiGroup User
- *
- * @apiParam {String} token Authentication token
- * @apiParam {String} id User ID
- *
- * @apiSuccess {Boolean} success true
- *
- * @apiError {Boolean} success false
- * @apiError {String} message Error message
- */
-exports.delete = function(req, res) {
-  if (req.decoded.role !== 'admin' || req.decoded._id == req.body.id) {
-    return res.json({ success: false, message: 'You are not allowed to delete this user' });
-  }
-  if (!req.body.id) return res.json({ success: false, message: 'User ID is required' });
-  User.findByIdAndRemove(req.body.id, function(err, user) {
-    if (err) return res.send(err);
-    if (!user) return res.json({ success: false, message: 'User not found' });
-    fs.delete(user.picture);
-    res.json({ success: true });
   });
 };

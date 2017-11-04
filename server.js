@@ -12,11 +12,13 @@ var upload = multer({ dest: './public/uploads' });
 var exec = require('child_process').exec;
 
 var User = require('./api/models/User');
+var Static = require('./api/models/Static');
 var Preference = require('./api/models/Preference');
 var Follow = require('./api/models/Follow');
 var Notification = require('./api/models/Notification');
 
 var users = require('./api/controllers/UserController');
+var statics = require('./api/controllers/StaticController');
 var preferences = require('./api/controllers/PreferenceController');
 var follows = require('./api/controllers/FollowController');
 var notifications = require('./api/controllers/NotificationController');
@@ -82,7 +84,6 @@ app.post('/api/facebook-sign-in', users.facebookSignIn);
 app.post('/api/contact-business', verifyToken, users.contactBusiness);
 app.post('/api/reset-password', users.resetPassword);
 
-app.post('/api/user', upload.single('picture'), verifyToken, users.validateNewUser, users.create);
 app.get('/api/user', verifyToken, users.read);
 app.get('/api/users', users.index);
 app.put('/api/user',
@@ -91,7 +92,8 @@ app.put('/api/user',
   users.validateExistingUser,
   users.update
 );
-app.delete('/api/user', verifyToken, users.delete);
+
+app.get('/api/statics', statics.list);
 
 app.get('/api/preferences', preferences.list);
 app.post('/api/preference', verifyToken, preferences.create);
