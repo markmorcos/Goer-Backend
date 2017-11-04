@@ -270,22 +270,25 @@ exports.facebookSignIn = function(req, res) {
   axios
   .get(`https://graph.facebook.com/me?fields=id,first_name,last_name,email,picture{url},gender,locale,birthday&access_token=${req.body.accessToken}`)
   .then(function(response) {
-    if (response.data.error) return res.json({ success: false, message: response.data.error.message });
-    const language = response.data.locale.split('_')[0];
-    User.findOneOrCreate({ email: response.data.email }, {
-      firstName: response.data.first_name,
-      lastName: response.data.last_name,
-      email: response.data.email,
-      gender: response.data.gender,
-      birthdate: moment(new Date(response.data.birthday)).format('YYYY-MM-DD'),
-      confirmation: generateNumber(6),
+    const profile = response.data;
+    if (profile.error) return res.json({ success: false, message: profile.error.message });
+    const language = profile.locale.split('_')[0];
+    User.findOneOrCreate({ email: profile.email }, {
+      firstName: profile.first_name,
+      lastName: profile.last_name,
+      email: profile.email,
+      gender: profile.gender,
+      birthdate: profile.birthday ? moment(new Date(profile.birthday)).format('YYYY-MM-DD') : undefined,
       language: language === 'en' || language === 'in' ? language : undefined,
       confirmed: true,
-      facebook: response.data.id,
-      picture: response.data.picture.url
+      facebook: profile.id,
+      picture: profile.picture.data.url
     }, function (err, user) {
       if (err) return res.send(err);
-      user.facebook = response.data.id;
+      user.facebook = profile.id;
+      user.picture = !user.picture || user.picture.indexOf('fbcdn.net') !== -1
+      ? profile.picture.data.url
+      : user.picture;
       user.save(function(err, user) {
         var token = jwt.sign(user.toObject(), 'secret');
         res.json({ success: true, user: user, token: token });
