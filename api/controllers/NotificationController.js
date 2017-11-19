@@ -24,7 +24,7 @@ exports.list = function(req, res) {
   .find({ receiver: req.decoded._id })
   .populate({
     path: 'sender receiver',
-    select: 'firstName lastName picture gender'
+    select: 'name picture gender'
   })
   .sort('-createdAt')
   .exec(function(err, notifications) {
@@ -34,7 +34,7 @@ exports.list = function(req, res) {
       return {
         title: i18n[req.decoded.language][notification.type].title(user),
         body: i18n[req.decoded.language][notification.type].body(user),
-        sender: notification.sender,
+        user: user,
         relativeTime: moment(notification.createdAt).fromNow()
       };
     });

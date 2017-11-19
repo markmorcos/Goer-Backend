@@ -26,14 +26,10 @@ exports.list = function(req, res) {
   Follow.find(query).populate({
     path: key,
     select: 'name picture',
-    options: { sort: { name: 1 } }
+    options: { sort: { createdAt: -1 } }
   }).exec(function(err, follows) {
     if (err) return res.send(err);
-    var users = [];
-    follows.forEach(function(follow) {
-      users.push(follow[key]);
-    });
-    res.json({ success: true, users: users });
+    res.json({ success: true, users: follows.map(function(follow) { return follow[key]; }) });
   });
 };
 
@@ -69,7 +65,7 @@ exports.follow = function(req, res) {
     newFollow.save(function(err, follow) {
       if (err) return res.send(err);
       Notification.create({
-        type: 'follow',
+        type: 'request',
         sender: req.decoded._id,
         receiver: req.body.id
       }, function(err, notification) {

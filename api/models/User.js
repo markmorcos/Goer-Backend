@@ -4,10 +4,16 @@ var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 
 var User = new Schema({
+  role: {
+    type: String,
+    enum: ['admin', 'business', 'user'],
+    default: 'user'
+  },
   picture: String,
-  name: String,
-  firstName: String,
-  lastName: String,
+  name: {
+    first: String,
+    last: String
+  },
   location: {
     latitude: Number,
     longitude: Number
@@ -41,7 +47,6 @@ var User = new Schema({
     default: false
   },
   facebook: String,
-  instagram: String,
   preferences: [{
     type: Schema.Types.ObjectId,
     ref: 'Preference'
@@ -50,11 +55,18 @@ var User = new Schema({
     type: Schema.Types.ObjectId,
     ref: 'Tag'
   }],
-  role: {
-    type: String,
-    enum: ['admin', 'manager', 'business', 'user'],
-    default: 'user'
-  }
+  businesses: [{
+    _id: false,
+    type: {
+      type: String,
+      enum: ['gone', 'togo', 'favorite'],
+      default: 'gone'
+    },
+    business: {
+      type: Schema.Types.ObjectId,
+      ref: 'User'
+    }
+  }]
 }, { timestamps: true });
 
 User.statics.findOneOrCreate = function findOneOrCreate(condition, doc, callback) {

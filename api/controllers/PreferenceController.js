@@ -22,7 +22,7 @@ exports.list = function(req, res) {
 };
 
 /**
- * @api {post} /api/preference Create new preference (Admin and manager only)
+ * @api {post} /api/preference Create new preference (Admin only)
  * @apiName CreatePreference
  * @apiGroup Preference
  *
@@ -36,7 +36,7 @@ exports.list = function(req, res) {
  * @apiError {String} message Error message
  */
 exports.create = function(req, res) {
-  if (req.decoded.role !== 'admin' && req.decoded.role !== 'manager') {
+  if (req.decoded.role !== 'admin') {
     return res.json({ success: false, message: 'You are not allowed to create preferences' });
   }
   if (!req.body.name) return res.json({ success: false, message: 'Name is required' });
@@ -48,7 +48,7 @@ exports.create = function(req, res) {
 };
 
 /**
- * @api {put} /api/preference Update existing preference (Admin and manager only)
+ * @api {put} /api/preference Update existing preference (Admin only)
  * @apiName UpdatePreference
  * @apiGroup Preference
  *
@@ -62,7 +62,7 @@ exports.create = function(req, res) {
  * @apiError {String} message Error message
  */
 exports.update = function(req, res) {
-  if (req.decoded.role !== 'admin' && req.decoded.role !== 'manager') {
+  if (req.decoded.role !== 'admin') {
     return res.json({ success: false, message: 'You are not allowed to update this preference' });
   }
   if (!req.body.id) return res.json({ success: false, message: 'ID is required' });
@@ -77,7 +77,7 @@ exports.update = function(req, res) {
 };
 
 /**
- * @api {delete} /api/preference Delete existing preference (Admin and manager only)
+ * @api {delete} /api/preference Delete existing preference (Admin only)
  * @apiName DeletePreference
  * @apiGroup Preference
  *
@@ -90,7 +90,7 @@ exports.update = function(req, res) {
  * @apiError {String} message Error message
  */
 exports.delete = function(req, res) {
-  if (req.decoded.role !== 'admin' && req.decoded.role !== 'manager') {
+  if (req.decoded.role !== 'admin') {
     return res.json({ success: false, message: 'You are not allowed to delete this preference' });
   }
   if (!req.body.id) return res.json({ success: false, message: 'ID is required' });

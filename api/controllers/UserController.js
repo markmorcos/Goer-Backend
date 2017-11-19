@@ -5,32 +5,18 @@ var User = mongoose.model('User');
 var bcrypt = require('bcrypt');
 var jwt = require('jsonwebtoken');
 var multer  = require('multer');
-var nodemailer = require('nodemailer');
 var axios = require('axios');
 var moment = require('moment');
+var ses = require('node-ses');
 
 var fs = require('../util/fs');
 var constants = require('../util/constants');
 
-function sendEmail(to, subject, html, text, next) {
-  var transporter = nodemailer.createTransport({
-    service: 'Gmail',
-    auth: {
-      user: 'mark.yehia@gmail.com',
-      pass: 'Ntldrdll2971993,'
-    }
-  });
-  var mailOptions = {
-    from: 'mark.yehia@gmail.com',
-    to: to,
-    subject: subject,
-    html: html,
-    text: text
-  };
-  transporter.sendMail(mailOptions, function(error, info) {
-    next(error, info);
-  });
-}
+var client = ses.createClient({
+  amazon: constants.endpoint,
+  key: process.env.NODE_SES_KEY,
+  secret: process.env.NODE_SES_SECRET
+});
 
 function generateNumber(length) {
   var min = Math.pow(10, length - 1);
@@ -68,17 +54,15 @@ exports.validateNewUser = function(req, res, next) {
         }
         break;
     }
-    if (valid) return next();
-    if (req.file) fs.delete(req.file.path);
+    if (!valid && req.file) fs.delete(req.file.path);
+    return next();
   });
 }
 
 function populateUser(req, res, next) {
   var user = new User({
     picture: req.body.picture,
-    name: req.body.name,
-    firstName: req.body.firstName,
-    lastName: req.body.lastName,
+    name: { first: req.body.name || req.body.firstName, last: req.body.lastName },
     location: req.body.latitude && req.body.longitude
     ? { latitude: req.body.latitude, longitude: req.body.longitude }
     : undefined,
@@ -92,8 +76,7 @@ function populateUser(req, res, next) {
     description: req.body.description,
     language: req.body.language,
     approved: req.body.role !== 'business',
-    facebook: req.body.facebook,
-    instagram: req.body.instagram
+    facebook: req.body.facebook
   });
   if (req.file) {
     const directory = `uploads/users/${user._id}/picture`;
@@ -101,7 +84,7 @@ function populateUser(req, res, next) {
     const ext = req.file.originalname.split('.').pop();
     const path = `public/${directory}/0.${ext}`;
     fs.move(req.file.path, path);
-    user.picture = `${constants.url}${path}`;
+    user.picture = `${constants.url}/${directory}`;
     next(user);
   } else {
     next(user);
@@ -109,15 +92,15 @@ function populateUser(req, res, next) {
 }
 
 function sendConfirmation(user, next) {
-  sendEmail(
-    user.email,
-    'Goer',
-    `Your confirmation code is ${user.confirmation}.`,
-    `Your confirmation code is ${user.confirmation}.`,
-    function (err, info) {
-      next(err, info);
-    }
-  );
+  client.sendEmail({
+    to: user.email,
+    from: constants.from,
+    subject: 'Goer',
+    message: `Your confirmation code is ${user.confirmation}.`,
+    altText: `Your confirmation code is ${user.confirmation}.`
+  }, function(err, data, response) {
+    next(err, data, response);
+  });
 }
 
 /**
@@ -125,22 +108,23 @@ function sendConfirmation(user, next) {
  * @apiName SignUp
  * @apiGroup User
  *
- * @apiParam {File} picture picture (Optional)
+ * @apiParam {File} picture Picture (optional)
  * @apiParam {String} email Email
  * @apiParam {String} password Password
- * @apiParam {String} phone Phone (Optional in users only)
- * @apiParam {String} description Description (Optional)
- * @apiParam {String} language Language; en or ar (Optional, default: en)
- * @apiParam {String} facebook (Optional)
- * @apiParam {String} instagram (Optional)
+ * @apiParam {String} phone Phone (optional in users only)
+ * @apiParam {String} description Description (optional)
+ * @apiParam {String} language Language; en or ar (optional, default: en)
+ * @apiParam {String} facebook (optional)
+ * @apiParam {Array} preferences Preferences (optional, user only)
+ * @apiParam {Array} tags Tags (optional, business only)
  * @apiParam {String} firstName User first name (user only)
  * @apiParam {String} lastName User last name (user only)
- * @apiParam {String} gender User gender; male or female (Optional, default: male, user only)
- * @apiParam {Boolean} private Private; true or false (Optional, default: false, user only)
+ * @apiParam {String} gender User gender; male or female (optional, default: male, user only)
+ * @apiParam {Boolean} private Private; true or false (optional, default: false, user only)
  * @apiParam {String} birthdate User birthdate (user only)
  * @apiParam {String} name Business name (business only)
  * @apiParam {Object} location Business location; latitude and longitude (business only)
- * @apiParam {String} role Role; user or business (Optional, default: user)
+ * @apiParam {String} role Role; user or business (optional, default: user)
  *
  * @apiSuccess {Boolean} success true
  * @apiSuccess {Object} user Signed up user details
@@ -153,9 +137,16 @@ exports.signUp = function(req, res) {
   populateUser(req, res, function(user) {
     user.save(function(err, user) {
       if (err) return res.send(err);
-      sendConfirmation(user, function(err, info) {
+      sendConfirmation(user, function(err, data, response) {
         if (err) return res.send(err);
-        res.json({ success: true, user: user });
+        User.populate(user, [
+          { path: 'preferences', select: 'name' },
+          { path: 'tags', select: 'name' },
+          { path: 'businesses.business', select: 'name picture' }
+        ], function(err, user) {
+          if (err) return res.send(err);
+          res.json({ success: true, user: user });
+        });
       });
     });
   });
@@ -178,7 +169,8 @@ exports.resendConfirmation = function(req, res) {
   User.findById(req.body.id, function(err, user) {
     if (err) return res.send(err);
     if (!user) return res.json({ success: false, message: 'User not found' });
-    sendConfirmation(user, function(err, info) {
+    if (user.confirmed) return res.json({ success: false, message: 'User already confirmed' });
+    sendConfirmation(user, function(err, data, response) {
       if (err) return res.send(err);
       res.json({ success: true });
     });
@@ -234,15 +226,21 @@ exports.confirmUser = function(req, res) {
 exports.signIn = function(req, res) {
   if (!req.body.email) return res.json({ success: false, message: 'Email is required' });
   if (!req.body.password) return res.json({ success: false, message: 'Password is required' });
-  User.findOne({ email: req.body.email }, function(err, user) {
+  User
+  .findOne({ email: req.body.email })
+  .populate([
+    { path: 'preferences', select: 'name' },
+    { path: 'tags', select: 'name' },
+    { path: 'businesses.business', select: 'name picture' }
+  ])
+  .exec(function(err, user) {
     if (err) return res.send(err);
     if (!user) return res.json({ success: false, message: 'Incorrect email or password' });
-    if (!user.confirmed) return res.json({ success: false, message: 'Account not confirmed yet' });
     if (!user.approved) return res.json({ success: false, message: 'Account not approved yet' });
     bcrypt.compare(req.body.password, user.password, function(err, match) {
       if (!match) return res.json({ success: false, message: 'Incorrect email or password' });
       if (err) return res.send(err);
-      var token = jwt.sign(user.toObject(), 'secret');
+      var token = jwt.sign(user.toObject(), process.env.JWT_SECRET);
       res.json({ success: true, user: user, token: token });
     });
   });
@@ -271,8 +269,7 @@ exports.facebookSignIn = function(req, res) {
     if (profile.error) return res.json({ success: false, message: profile.error.message });
     const language = profile.locale.split('_')[0];
     User.findOneOrCreate({ email: profile.email }, {
-      firstName: profile.first_name,
-      lastName: profile.last_name,
+      name: { first: profile.first_name, last: profile.last_name },
       email: profile.email,
       gender: profile.gender,
       birthdate: profile.birthday ? moment(new Date(profile.birthday)).format('YYYY-MM-DD') : undefined,
@@ -287,7 +284,7 @@ exports.facebookSignIn = function(req, res) {
       ? profile.picture.data.url
       : user.picture;
       user.save(function(err, user) {
-        var token = jwt.sign(user.toObject(), 'secret');
+        var token = jwt.sign(user.toObject(), process.env.JWT_SECRET);
         res.json({ success: true, user: user, token: token });
       });
     });
@@ -319,20 +316,21 @@ exports.contactBusiness = function(req, res) {
     if (!user || user.role !== 'business') {
       return res.json({ success: false, message: 'Business not found' });
     }
-    sendEmail(
-      user.email,
-      'Goer',
-      `Message from ${req.decoded.firstName} ${req.decoded.lastName}<br>
-      Email: ${req.decoded.email}<br>
-      Message: ${req.body.message}`,
-      `Message from ${req.decoded.firstName} ${req.decoded.lastName}
+    client.sendEmail({
+      to: user.email,
+      from: constants.from,
+      subject: 'Goer',
+      message: `Message from ${req.decoded.name.first} ${req.decoded.name.last}<br>
+      <strong>Email</strong>: <a href="mailto:${req.decoded.email}">${req.decoded.email}</a><br>
+      <strong>Message</strong>:<br>${req.body.message.replace(/(?:\r\n|\r|\n)/g, '<br>')}`,
+      altText: `Message from ${req.decoded.name.first} ${req.decoded.name.last}
 Email: ${req.decoded.email}
-Message: ${req.body.message}`,
-      function (err, info) {
-        if (err) return res.send(err);
-        res.json({ success: true });
-      }
-    );
+Message:
+${req.body.message}`,
+    }, function(err, data, response) {
+      if (err) return res.send(err);
+      res.json({ success: true });
+    });
   });
 }
 
@@ -357,23 +355,59 @@ exports.resetPassword = function(req, res) {
     user.password = bcrypt.hashSync(newPassword, 10);
     user.save(function(err, user) {
       if (err) return res.send(err);
-      sendEmail(
-        user.email,
-        'Goer',
-        `Your new password is ${newPassword}.`,
-        `Your new password is ${newPassword}.`,
-        function (err, info) {
-          if (err) return res.send(err);
-          var token = jwt.sign(user.toObject(), 'secret');
-          res.json({ success: true });
-        }
-      );
+      client.sendEmail({
+        to: user.email,
+        from: constants.from,
+        subject: 'Goer',
+        message: `Your new password is ${newPassword}.`,
+        altText: `Your new password is ${newPassword}.`,
+      }, function(err, data, response) {
+        if (err) return res.send(err);
+        res.json({ success: true });
+      });
     });
   });
 }
 
-exports.index = function(req, res) {
-  User.find({}, function(err, users) {
+/**
+ * @api {put} /api/toggle-business Save or unsave business in a certain list
+ * @apiName ToggleBusiness
+ * @apiGroup User
+ *
+ * @apiParam {String} token Authentication token
+ * @apiParam {String} operation Operation; save or unsave
+ * @apiParam {String} id Business ID
+ * @apiParam {String} type Type; gone, togo, favorite
+ *
+ * @apiSuccess {Boolean} success true
+ *
+ * @apiError {Boolean} success false
+ * @apiError {String} message Error message
+ */
+exports.toggleBusiness = function(req, res) {
+  if (req.decoded.role !== 'user') {
+    return res.json({ success: false, message: 'You are not allowed to perform this action' });
+  }
+  if (!req.body.operation) return res.json({ success: false, message: 'Operation is required' });
+  if (!req.body.id) return res.json({ success: false, message: 'ID is required' });
+  if (!req.body.type) return res.json({ success: false, message: 'Type is required' });
+  User.findById(req.body.id, function(err, user) {
+    if (err) return res.send(err);
+    if (user.role !== 'business') {
+      return res.json({ success: false, message: 'This is not a place' });
+    }
+    const query = req.body.operation === 'save'
+    ? { $addToSet: { businesses: { type: req.body.type, business: user._id } } }
+    : { $pull: { businesses: { type: req.body.type, business: user._id } } };
+    User.findByIdAndUpdate(req.decoded._id, query, function(err, user) {
+        if (err) return res.send(err);
+        return res.json({ success: true });
+    });
+  });
+}
+
+exports.list = function(req, res) {
+  User.find({}).sort([['name.first', 1], ['name.last', 1]]).exec(function(err, users) {
     if (err) return res.send(err);
     res.json({ success: true, users: users });
   });
@@ -404,7 +438,14 @@ function getPrivateUser(user) {
  */
 exports.read = function(req, res) {
   if (!req.query.id) return res.json({ success: false, message: 'User ID is required' });
-  User.findById(req.query.id, function(err, user) {
+  User
+  .findById(req.query.id)
+  .populate([
+    { path: 'preferences', select: 'name' },
+    { path: 'tags', select: 'name' },
+    { path: 'businesses.business', select: 'name picture' }
+  ])
+  .exec(function(err, user) {
     if (err) return res.send(err);
     if (!user) return res.json({ success: false, message: 'User not found' });
     if (user.private) {
@@ -416,17 +457,16 @@ exports.read = function(req, res) {
 
 exports.validateExistingUser = function(req, res, next) {
   var valid = true;
-  User.findById(req.body.id || req.decoded._id, function(err, user) {
+  User
+  .findById(req.body.id || req.decoded._id, function(err, user) {
     if (valid && err) valid = false, res.send(err);
     if (valid && !user) valid = false, res.json({ success: false, message: 'User not found' });
     if (valid && req.decoded._id != user._id) {
       valid = false, res.json({ success: false, message: 'You are not allowed to update this user' });
     }
-    if (valid) {
-      req.user = user;
-      return next();
-    }
-    if (req.file) fs.delete(req.file.path);
+    if (!valid && req.file) return fs.delete(req.file.path);
+    req.user = user;
+    return next();
   });  
 }
 
@@ -436,22 +476,23 @@ exports.validateExistingUser = function(req, res, next) {
  * @apiGroup User
  *
  * @apiParam {String} token Authentication token
- * @apiParam {String} id User ID (Optional, default: signed in user ID)
- * @apiParam {File} picture picture (Optional)
- * @apiParam {String} email Email (Optional)
- * @apiParam {String} password Password (Optional)
- * @apiParam {String} phone Phone (Optional)
- * @apiParam {String} description Description (Optional)
- * @apiParam {String} language Language; en or ar (Optional, default: en)
- * @apiParam {String} facebook (Optional)
- * @apiParam {String} instagram (Optional)
- * @apiParam {String} firstName User first name (Optional, user only)
- * @apiParam {String} lastName User last name (Optional, user only)
- * @apiParam {String} gender User gender; male or female (Optional, default: male, user only)
- * @apiParam {Boolean} private Private; true or false (Optional, default: false, user only)
- * @apiParam {String} birthdate User birthdate (Optional, user only)
- * @apiParam {String} name Business name (Optional, business only)
- * @apiParam {Object} location Business location; latitude and longitude (Optional, business only)
+ * @apiParam {String} id User ID (optional, default: signed in user ID)
+ * @apiParam {File} picture Picture (optional)
+ * @apiParam {String} email Email (optional)
+ * @apiParam {String} password Password (optional)
+ * @apiParam {String} phone Phone (optional)
+ * @apiParam {String} description Description (optional)
+ * @apiParam {String} language Language; en or ar (optional, default: en)
+ * @apiParam {String} facebook (optional)
+ * @apiParam {Array} preferences Preferences (optional, user only)
+ * @apiParam {Array} tags Tags (optional, business only)
+ * @apiParam {String} firstName User first name (optional, user only)
+ * @apiParam {String} lastName User last name (optional, user only)
+ * @apiParam {String} gender User gender; male or female (optional, default: male, user only)
+ * @apiParam {Boolean} private Private; true or false (optional, default: false, user only)
+ * @apiParam {String} birthdate User birthdate (optional, user only)
+ * @apiParam {String} name Business name (optional, business only)
+ * @apiParam {Object} location Business location; latitude and longitude (optional, business only)
  *
  * @apiSuccess {Boolean} success true
  * @apiSuccess {Object} user Updated user details
@@ -467,22 +508,22 @@ exports.update = function(req, res) {
   user.description = req.body.description || user.description;
   user.language = req.body.language || user.language;
   user.phone = req.body.phone || user.phone;
+  user.name = {
+    first: req.body.name || req.body.firstName || user.name.first,
+    last: req.body.lastName || user.name.last
+  };
   switch (user.role) {
     case 'business':
-      user.name = req.body.name || user.name;
       user.location = req.body.latitude && req.body.longitude
       ? { latitude: req.body.latitude, longitude: req.body.longitude }
       : user.location;
-      user.tags = req.body.tags || [];      
+      user.tags = req.body.tags === undefined ? user.tags : req.body.tags || [];      
       break;
     case 'user':
-      user.firstName = req.body.firstName || user.firstName;
-      user.lastName = req.body.lastName || user.lastName;
       user.gender = req.body.gender || user.gender;
       user.birthdate = req.body.birthdate || user.birthdate;
       user.facebook = req.body.facebook === undefined ? user.facebook : req.body.facebook;
-      user.instagram = req.body.instagram === undefined ? user.instagram : req.body.facebook;
-      user.preferences = req.body.preferences || [];
+      user.preferences = req.body.preferences === undefined ? user.preferences : req.body.preferences || [];      
       break;
     default:
       break;
@@ -493,12 +534,19 @@ exports.update = function(req, res) {
     const ext = req.file.originalname.split('.').pop();
     const path = `public/${directory}/0.${ext}`;
     fs.move(req.file.path, path);
-    user.picture = `${constants.url}${path}`;
+    user.picture = `${constants.url}/${directory}`;
   } else {
     user.picture = user.picture === undefined ? user.picture : req.body.picture;
   }
   user.save(function(err, user) {
     if (err) return res.send(err);
-    res.json({ success: true, user: user });
+    User.populate(user, [
+      { path: 'preferences', select: 'name' },
+      { path: 'tags', select: 'name' },
+      { path: 'businesses.business', select: 'name picture' }
+    ], function(err, user) {
+      if (err) return res.send(err);
+      res.json({ success: true, user: user });
+    });  
   });
 };

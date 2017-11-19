@@ -3,7 +3,6 @@
 var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 var Comment = require('./Comment');
-var Reaction = require('./Reaction');
 
 var Post = new Schema({
   user: {
@@ -14,7 +13,7 @@ var Post = new Schema({
     type: Schema.Types.ObjectId,
     ref: 'User'
   },
-  name: String,
+  title: String,
   location: {
     latitude: Number,
     longitude: Number
@@ -25,8 +24,18 @@ var Post = new Schema({
     type: Schema.Types.ObjectId,
     ref: 'User'
   }],
-  comments: [Comment],
-  reactions: [Reaction]
+  reactions: [{
+    _id: false,
+    type: {
+      type: String,
+      enum: ['like', 'dislike'],
+      default: 'like'
+    },
+    user: {
+      type: Schema.Types.ObjectId,
+      ref: 'User'
+    }
+  }]
 }, { timestamps: true });
 
-module.exports = mongoose.model('Preference', Preference);
+module.exports = mongoose.model('Post', Post);

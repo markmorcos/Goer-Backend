@@ -1,7 +1,7 @@
 exports.en = {
-  follow: {
+  request: {
     title: function(user) {
-      return `[[${user._id}]] started following you`;
+      return `[[${user._id}]] requested to follow you`;
     },
     body: function(user) {
       return '';
@@ -20,7 +20,7 @@ exports.en = {
 exports.in = {
   follow: {
     title: function(user) {
-      return `${user.firstName} ${user.lastName} قام${user.gender === 'male' ? '' : 'ت'} بمتابعتك`;
+      return '';
     },
     body: function(user) {
       return '';
@@ -28,7 +28,7 @@ exports.in = {
   },
   accept: {
     title: function(user) {
-      return `${user.firstName} ${user.lastName} قام${user.gender === 'male' ? '' : 'ت'} بالموافقة على طلب المتابعة`;
+      return '';
     },
     body: function(user) {
       return '';
