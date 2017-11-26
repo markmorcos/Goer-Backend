@@ -9,7 +9,7 @@ var mongoose = require('mongoose');
 var bodyParser = require('body-parser');
 var jwt = require('jsonwebtoken');
 var multer  = require('multer');
-var exec = require('child_process').exec;
+var spawn = require('child_process').spawn;
 
 var User = require('./api/models/User');
 var Save = require('./api/models/Save');
@@ -77,7 +77,7 @@ app.all('*', function(req, res, next) {
 });
 
 app.post('/deploy', function (req, res) {
-  var deploy = exec('sh', ['./public/deploy.sh']);
+  spawn('sh', ['./public/deploy.sh']);
   res.json({ success: true });
 });
 
