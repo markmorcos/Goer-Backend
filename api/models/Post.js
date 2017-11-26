@@ -2,7 +2,6 @@
 
 var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
-var Comment = require('./Comment');
 
 var Post = new Schema({
   user: {
@@ -23,18 +22,6 @@ var Post = new Schema({
   mentions: [{
     type: Schema.Types.ObjectId,
     ref: 'User'
-  }],
-  reactions: [{
-    _id: false,
-    type: {
-      type: String,
-      enum: ['like', 'dislike'],
-      default: 'like'
-    },
-    user: {
-      type: Schema.Types.ObjectId,
-      ref: 'User'
-    }
   }]
 }, { timestamps: true });
 

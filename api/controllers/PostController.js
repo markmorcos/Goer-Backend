@@ -10,6 +10,87 @@ var moment = require('moment');
 var fs = require('../util/fs');
 var constants = require('../util/constants');
 
+function populatePosts(query, userId, page = 1) {
+  return Post
+  .aggregate([
+    { $match: query },
+    { $lookup: { from: 'reactions', localField: '_id', foreignField: 'item.document', as: 'reactions' } },
+    { $lookup: { from: 'users', localField: 'user', foreignField: '_id', as: 'user' } },
+    { $unwind: '$user' },
+    { $lookup: { from: 'users', localField: 'business', foreignField: '_id', as: 'business' } },
+    { $unwind: '$business' },
+    { $lookup: { from: 'users', localField: 'mentions', foreignField: '_id', as: 'mentions' } },
+    { $unwind: '$mentions' },
+    {
+      $project: {
+        user: {
+          name: '$user.name',
+          picture: '$user.picture'
+        },
+        business: {
+          name: '$business.name',
+          picture: '$business.picture'
+        },
+        title: true,
+        location: true,
+        text: true,
+        pictures: true,
+        mentions: { name: '$mentions.name', picture: '$mentions.picture' },
+        reactionCount: {
+          likes: {
+            $size: {
+              $filter: {
+                input: '$reactions',
+                as: 'reactions',
+                cond: { $eq: ['$$reactions.type', 'like'] }
+              }
+            }
+          },
+          dislikes: {
+            $size: {
+              $filter: {
+                input: '$reactions',
+                as: 'reactions',
+                cond: { $eq: ['$$reactions.type', 'dilike'] }
+              }
+            }
+          }
+        },
+        reaction: {
+          $arrayElemAt: [{
+            $filter: {
+              input: '$reactions',
+              as: 'reactions',
+              cond: { $eq: ['$$reactions.user', userId] }
+            }
+          }, 0]
+        },
+        createdAt: true
+      }
+    },
+    { $unwind: '$reactionCount' },
+    { $unwind: '$mentions.name' },
+    {
+      $group: {
+        _id: '$_id',
+        user: { $first: '$user' },
+        business: { $first: '$business' },
+        title: { $first: '$title' },
+        location: { $first: '$location' },
+        text: { $first: '$text' },
+        pictures: { $first: '$pictures' },
+        mentions: { $push: '$mentions' },
+        reactions: { $first: '$reactionCount' },
+        reaction: { $first: '$reaction.type' },
+        createdAt: { $first: '$createdAt' },
+      }
+    },
+    { $sort: { createdAt: -1 } },
+    { $skip: (page - 1) * constants.perPage },
+    { $limit: constants.perPage },
+  ]);
+};
+
 exports.list = function(req, res) {
   if (!req.query.id) return res.json({ success: false, message: 'ID is required' });
   User.findById(req.query.id, function(err, user) {
@@ -23,23 +104,14 @@ exports.list = function(req, res) {
       if (!follow && req.decoded._id != user._id && user.private) {
         return res.json({ success: false, message: 'This profile is private' });
       }
-      Post
-      .find({ user: user._id })
-      .sort('-createdAt')
-      .populate([
-        { path: 'user', select: 'name picture' },
-        { path: 'business', select: 'name picture' },
-        { path: 'mentions', select: 'name picture' },
-        { path: 'reactions.user', select: 'name picture' }
-      ])
-      .exec(function(err, posts) {
+      populatePosts({ user: user._id }, req.decoded._id, req.query.page).exec(function(err, posts) {
         if (err) return res.send(err);
         moment.locale(req.decoded.language);
         res.json({
           success: true,
           posts: posts.map(function(post) {
-            post = post.toObject();
-            post.relativeTime = moment(post.createdAt).fromNow();   
+            post.createdAt = moment(post.createdAt).format('DD MMMM YYYY');
+            post.relativeTime = moment(post.createdAt).fromNow();
             return post;   
           })
         });
@@ -53,22 +125,14 @@ exports.feed = function(req, res) {
     if (err) return res.send(err);
     const userIds = follows.map(function(follow) { return follow._id; });
     userIds.push(req.decoded._id);
-    Post
-    .find({ user: { $in: userIds } })
-    .sort('-createdAt')
-    .populate([
-      { path: 'user', select: 'name picture' },
-      { path: 'business', select: 'name picture' },
-      { path: 'mentions', select: 'name picture' },
-      { path: 'reactions.user', select: 'name picture' }
-    ])
+    populatePosts({ user: { $in: userIds } }, req.decoded._id, req.query.page)
     .exec(function(err, posts) {
       if (err) return res.send(err);
       moment.locale(req.decoded.language);
       res.json({
         success: true,
         posts: posts.map(function(post) {
-          post = post.toObject();
+          post.createdAt = moment(post.createdAt).format('DD MMMM YYYY');   
           post.relativeTime = moment(post.createdAt).fromNow();   
           return post;   
         })
@@ -139,8 +203,7 @@ exports.create = function(req, res) {
       Post.populate(post, [
         { path: 'user', select: 'name picture' },
         { path: 'business', select: 'name picture' },
-        { path: 'mentions', select: 'name picture' },
-        { path: 'reactions.user', select: 'name picture' }
+        { path: 'mentions', select: 'name picture' }
       ], function(err, post) {
         if (err) return res.send(err);
         res.json({ success: true, post: post });
@@ -170,8 +233,7 @@ exports.read = function(req, res) {
   .populate([
     { path: 'user', select: 'name picture private' },
     { path: 'business', select: 'name picture' },
-    { path: 'mentions', select: 'name picture' },
-    { path: 'reactions.user', select: 'name picture' }
+    { path: 'mentions', select: 'name picture' }
   ])
   .exec(function(err, post) {
     if (err) return res.send(err);
@@ -191,8 +253,7 @@ exports.validateExistingPost = function(req, res, next) {
   .populate([
     { path: 'user', select: 'name picture private' },
     { path: 'business', select: 'name picture' },
-    { path: 'mentions', select: 'name picture' },
-    { path: 'reactions.user', select: 'name picture' }
+    { path: 'mentions', select: 'name picture' }
   ])
   .exec(function(err, post) {
     if (valid && err) valid = false, res.send(err);
@@ -253,8 +314,7 @@ exports.update = function(req, res) {
     .populate(post, [
       { path: 'user', select: 'name picture private' },
       { path: 'business', select: 'name picture' },
-      { path: 'mentions', select: 'name picture' },
-      { path: 'reactions.user', select: 'name picture' }
+      { path: 'mentions', select: 'name picture' }
     ], function(err, post) {
       if (err) return res.send(err);
       res.json({ success: true, post: post });

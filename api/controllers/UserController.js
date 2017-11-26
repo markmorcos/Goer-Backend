@@ -142,7 +142,6 @@ exports.signUp = function(req, res) {
         User.populate(user, [
           { path: 'preferences', select: 'name' },
           { path: 'tags', select: 'name' },
-          { path: 'businesses.business', select: 'name picture' }
         ], function(err, user) {
           if (err) return res.send(err);
           res.json({ success: true, user: user });
@@ -230,8 +229,7 @@ exports.signIn = function(req, res) {
   .findOne({ email: req.body.email })
   .populate([
     { path: 'preferences', select: 'name' },
-    { path: 'tags', select: 'name' },
-    { path: 'businesses.business', select: 'name picture' }
+    { path: 'tags', select: 'name' }
   ])
   .exec(function(err, user) {
     if (err) return res.send(err);
@@ -369,43 +367,6 @@ exports.resetPassword = function(req, res) {
   });
 }
 
-/**
- * @api {put} /api/toggle-business Save or unsave business in a certain list
- * @apiName ToggleBusiness
- * @apiGroup User
- *
- * @apiParam {String} token Authentication token
- * @apiParam {String} operation Operation; save or unsave
- * @apiParam {String} id Business ID
- * @apiParam {String} type Type; gone, togo, favorite
- *
- * @apiSuccess {Boolean} success true
- *
- * @apiError {Boolean} success false
- * @apiError {String} message Error message
- */
-exports.toggleBusiness = function(req, res) {
-  if (req.decoded.role !== 'user') {
-    return res.json({ success: false, message: 'You are not allowed to perform this action' });
-  }
-  if (!req.body.operation) return res.json({ success: false, message: 'Operation is required' });
-  if (!req.body.id) return res.json({ success: false, message: 'ID is required' });
-  if (!req.body.type) return res.json({ success: false, message: 'Type is required' });
-  User.findById(req.body.id, function(err, user) {
-    if (err) return res.send(err);
-    if (user.role !== 'business') {
-      return res.json({ success: false, message: 'This is not a place' });
-    }
-    const query = req.body.operation === 'save'
-    ? { $addToSet: { businesses: { type: req.body.type, business: user._id } } }
-    : { $pull: { businesses: { type: req.body.type, business: user._id } } };
-    User.findByIdAndUpdate(req.decoded._id, query, function(err, user) {
-        if (err) return res.send(err);
-        return res.json({ success: true });
-    });
-  });
-}
-
 exports.list = function(req, res) {
   User.find({}).sort([['name.first', 1], ['name.last', 1]]).exec(function(err, users) {
     if (err) return res.send(err);
@@ -442,8 +403,7 @@ exports.read = function(req, res) {
   .findById(req.query.id)
   .populate([
     { path: 'preferences', select: 'name' },
-    { path: 'tags', select: 'name' },
-    { path: 'businesses.business', select: 'name picture' }
+    { path: 'tags', select: 'name' }
   ])
   .exec(function(err, user) {
     if (err) return res.send(err);
@@ -542,8 +502,7 @@ exports.update = function(req, res) {
     if (err) return res.send(err);
     User.populate(user, [
       { path: 'preferences', select: 'name' },
-      { path: 'tags', select: 'name' },
-      { path: 'businesses.business', select: 'name picture' }
+      { path: 'tags', select: 'name' }
     ], function(err, user) {
       if (err) return res.send(err);
       res.json({ success: true, user: user });

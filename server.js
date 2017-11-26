@@ -12,20 +12,24 @@ var multer  = require('multer');
 var exec = require('child_process').exec;
 
 var User = require('./api/models/User');
-var Static = require('./api/models/Static');
-var Tag = require('./api/models/Tag');
+var Save = require('./api/models/Save');
 var Preference = require('./api/models/Preference');
+var Tag = require('./api/models/Tag');
 var Follow = require('./api/models/Follow');
-var Notification = require('./api/models/Notification');
 var Post = require('./api/models/Post');
+var Reaction = require('./api/models/Reaction');
+var Notification = require('./api/models/Notification');
+var Static = require('./api/models/Static');
 
 var users = require('./api/controllers/UserController');
-var statics = require('./api/controllers/StaticController');
-var tags = require('./api/controllers/TagController');
+var saves = require('./api/controllers/SaveController');
 var preferences = require('./api/controllers/PreferenceController');
+var tags = require('./api/controllers/TagController');
 var follows = require('./api/controllers/FollowController');
-var notifications = require('./api/controllers/NotificationController');
 var posts = require('./api/controllers/PostController');
+var reactions = require('./api/controllers/ReactionController');
+var notifications = require('./api/controllers/NotificationController');
+var statics = require('./api/controllers/StaticController');
 
 app.use(morgan('dev'));
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -77,7 +81,7 @@ app.post('/deploy', function (req, res) {
   res.json({ success: true });
 });
 
-// User or Business
+// User
 app.post( '/api/sign-up', upload.single('picture'), users.validateNewUser, users.signUp);
 app.post('/api/resend-confirmation', users.resendConfirmation);
 app.post('/api/confirm-user', users.confirmUser);
@@ -85,20 +89,15 @@ app.post('/api/sign-in', users.signIn);
 app.post('/api/facebook-sign-in', users.facebookSignIn);
 app.post('/api/contact-business', verifyToken, users.contactBusiness);
 app.post('/api/reset-password', users.resetPassword);
-app.put('/api/toggle-business', verifyToken, users.toggleBusiness);
 
 app.get('/api/user', verifyToken, users.read);
 app.get('/api/users', users.list);
 app.put('/api/user', upload.single('picture'), verifyToken, users.validateExistingUser, users.update);
 
-// Static
-app.get('/api/statics', statics.list);
-
-// Tag
-app.get('/api/tags', tags.list);
-app.post('/api/tag', verifyToken, tags.create);
-app.put('/api/tag', verifyToken, tags.update);
-app.delete('/api/tag', verifyToken, tags.delete);
+// Save
+app.get('/api/saves', verifyToken, saves.list);
+app.post('/api/save', verifyToken, saves.create);
+app.delete('/api/save', verifyToken, saves.delete);
 
 // Preference
 app.get('/api/preferences', preferences.list);
@@ -106,15 +105,18 @@ app.post('/api/preference', verifyToken, preferences.create);
 app.put('/api/preference', verifyToken, preferences.update);
 app.delete('/api/preference', verifyToken, preferences.delete);
 
+// Tag
+app.get('/api/tags', tags.list);
+app.post('/api/tag', verifyToken, tags.create);
+app.put('/api/tag', verifyToken, tags.update);
+app.delete('/api/tag', verifyToken, tags.delete);
+
 // Follow
 app.get('/api/follows', verifyToken, follows.list);
 app.post('/api/follow', verifyToken, follows.follow);
 app.put('/api/accept', verifyToken, follows.accept);
 app.delete('/api/reject', verifyToken, follows.reject);
 app.delete('/api/unfollow', verifyToken, follows.delete);
-
-// Notification
-app.get('/api/notifications', verifyToken, notifications.list);
 
 // Post
 app.get('/api/feed', verifyToken, posts.feed);
@@ -124,8 +126,19 @@ app.get('/api/post', verifyToken, posts.read);
 app.put('/api/post', upload.array('pictures'), verifyToken, posts.validateExistingPost, posts.update);
 app.delete('/api/post', verifyToken, posts.delete);
 
+// Post
+app.post('/api/reaction', verifyToken, reactions.create);
+app.put('/api/reaction', verifyToken, reactions.update);
+app.delete('/api/reaction', verifyToken, reactions.delete);
+
+// Notification
+app.get('/api/notifications', verifyToken, notifications.list);
+
+// Static
+app.get('/api/statics', statics.list);
+
 app.use(function(req, res) {
-  return res.status(404).send({ error: req.originalUrl + ' not found' })
+  return res.status(404).send({ error: req.method + ' ' + req.originalUrl + ' not found' })
 });
 
 app.listen(port);

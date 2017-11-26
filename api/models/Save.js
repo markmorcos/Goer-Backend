@@ -3,7 +3,7 @@
 var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 
-var Rating = new Schema({
+var Save = new Schema({
   user: {
     type: Schema.Types.ObjectId,
     ref: 'User'
@@ -12,7 +12,11 @@ var Rating = new Schema({
     type: Schema.Types.ObjectId,
     ref: 'User'
   },
-  value: Number
+  type: {
+    type: String,
+    enum: ['gone', 'togo', 'favorite'],
+    default: 'gone'
+  }
 }, { timestamps: true });
 
-module.exports = mongoose.model('Rating', Rating);
+module.exports = mongoose.model('Save', Save);

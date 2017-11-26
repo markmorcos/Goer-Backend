@@ -54,18 +54,6 @@ var User = new Schema({
   tags: [{
     type: Schema.Types.ObjectId,
     ref: 'Tag'
-  }],
-  businesses: [{
-    _id: false,
-    type: {
-      type: String,
-      enum: ['gone', 'togo', 'favorite'],
-      default: 'gone'
-    },
-    business: {
-      type: Schema.Types.ObjectId,
-      ref: 'User'
-    }
   }]
 }, { timestamps: true });
 
