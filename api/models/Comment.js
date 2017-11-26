@@ -12,7 +12,11 @@ var Comment = new Schema({
     type: Schema.Types.ObjectId,
     ref: 'Post'
   },
-  text: String
+  text: String,
+  mentions: [{
+    type: Schema.Types.ObjectId,
+    ref: 'User'
+  }]
 }, { timestamps: true });
 
 module.exports = mongoose.model('Comment', Comment);
