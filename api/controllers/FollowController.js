@@ -70,7 +70,7 @@ exports.follow = function(req, res) {
         receiver: req.body.id
       }, function(err, notification) {
         if (err) return res.send(err);
-        // TODO send push notification
+        // TODO: send push notification
         res.json({ success: true });
       })  
     });
@@ -109,7 +109,7 @@ exports.accept = function(req, res) {
         receiver: req.body.id
       }, function(err, notification) {
         if (err) return res.send(err);
-        // TODO send push notification
+        // TODO: send push notification
         res.json({ success: true });
       })  
     });

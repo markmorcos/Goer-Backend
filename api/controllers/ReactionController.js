@@ -14,16 +14,13 @@ var Reaction = mongoose.model('Reaction');
  * @apiParam {String} id Model ID
  *
  * @apiSuccess {Boolean} success true
- * @apiSuccess {Object} reaction Reaction created
  *
  * @apiError {Boolean} success false
  * @apiError {String} message Error message
  */
 exports.create = function(req, res) {
-  if (req.decoded.role !== 'user') {
-    return res.json({ success: false, message: 'You are not allowed to create reactions' });
-  }
   if (!req.body.type) return res.json({ success: false, message: 'Type is required' });
+  if (!req.body.model) return res.json({ success: false, message: 'Model is required' });
   if (!req.body.id) return res.json({ success: false, message: 'ID is required' });
   Reaction.findOne({
     user: req.decoded._id,
@@ -56,7 +53,6 @@ exports.create = function(req, res) {
  * @apiParam {String} id Model ID
  *
  * @apiSuccess {Boolean} success true
- * @apiSuccess {Object} reaction Reaction created
  *
  * @apiError {Boolean} success false
  * @apiError {String} message Error message
@@ -106,7 +102,7 @@ exports.delete = function(req, res) {
   if (!req.body.id) return res.json({ success: false, message: 'ID is required' });
   Reaction.findOne({
     user: req.decoded._id,
-    'item.model': req.body.model,
+    'item.model': req.body.type,
     'item.document': req.body.id
   }, function(err, reaction) {
     if (err) return res.send(err);

@@ -12,6 +12,7 @@ var Review = new Schema({
     type: Schema.Types.ObjectId,
     ref: 'User'
   },
+  rating: Number,
   text: String
 }, { timestamps: true });
 

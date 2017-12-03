@@ -22,10 +22,7 @@ exports.list = function(req, res) {
   moment.locale(req.decoded.language);
   Notification
   .find({ receiver: req.decoded._id })
-  .populate({
-    path: 'sender receiver',
-    select: 'name picture gender'
-  })
+  .populate({ path: 'sender receiver', select: 'name picture gender' })
   .sort('-createdAt')
   .exec(function(err, notifications) {
     if (err) return res.send(err);

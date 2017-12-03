@@ -14,6 +14,9 @@ function populatePosts(query, userId, page = 1) {
   return Post
   .aggregate([
     { $match: query },
+    { $lookup: { from: 'comments', localField: '_id', foreignField: 'item.document', as: 'comments' } },
+    { $unwind: { path: '$comments', preserveNullAndEmptyArrays: true } },
+    { $lookup: { from: 'users', localField: 'comments.user', foreignField: '_id', as: 'comments.user' } },
     { $lookup: { from: 'reactions', localField: '_id', foreignField: 'item.document', as: 'reactions' } },
     { $lookup: { from: 'users', localField: 'user', foreignField: '_id', as: 'user' } },
     { $unwind: '$user' },
@@ -23,19 +26,14 @@ function populatePosts(query, userId, page = 1) {
     { $unwind: '$mentions' },
     {
       $project: {
-        user: {
-          name: '$user.name',
-          picture: '$user.picture'
-        },
-        business: {
-          name: '$business.name',
-          picture: '$business.picture'
-        },
+        user: { _id: true, name: true, picture: true },
+        business: { _id: true, name: true, picture: true },
         title: true,
         location: true,
         text: true,
         pictures: true,
-        mentions: { name: '$mentions.name', picture: '$mentions.picture' },
+        mentions: { _id: true, name: true, picture: true },
+        comments: { _id: true, text: true, user: { name: true, picture: true } },
         reactionCount: {
           likes: {
             $size: {
@@ -70,6 +68,10 @@ function populatePosts(query, userId, page = 1) {
     },
     { $unwind: '$reactionCount' },
     { $unwind: '$mentions.name' },
+    { $unwind: '$mentions.picture' },
+    { $unwind: '$comments.user' },
+    { $unwind: '$comments.user.name' },
+    { $unwind: '$comments.user.picture' },
     {
       $group: {
         _id: '$_id',
@@ -80,6 +82,7 @@ function populatePosts(query, userId, page = 1) {
         text: { $first: '$text' },
         pictures: { $first: '$pictures' },
         mentions: { $push: '$mentions' },
+        comments: { $push: '$comments' },
         reactions: { $first: '$reactionCount' },
         reaction: { $first: '$reaction.type' },
         createdAt: { $first: '$createdAt' },
@@ -91,15 +94,60 @@ function populatePosts(query, userId, page = 1) {
   ]);
 };
 
+/**
+ * @api {get} /api/feed Read feed of a specific user
+ * @apiName ReadFeed
+ * @apiGroup Post
+ * @apiParam {String} token Authentication token
+ * @apiParam {String} page Page (optional, default: 1)
+ *
+ * @apiSuccess {Boolean} success true
+ * @apiSuccess {Object} posts Posts for the specified user
+ *
+ * @apiError {Boolean} success false
+ * @apiError {String} message Error message
+ */
+exports.feed = function(req, res) {
+  Follow.find({ follower: req.decoded._id, status: 'accepted' }, function(err, follows) {
+    if (err) return res.send(err);
+    const userIds = follows.map(function(follow) { return follow._id; });
+    userIds.push(req.decoded._id);
+    populatePosts({ user: { $in: userIds } }, req.decoded._id, req.query.page)
+    .exec(function(err, posts) {
+      if (err) return res.send(err);
+      moment.locale(req.decoded.language);
+      res.json({
+        success: true,
+        posts: posts.map(function(post) {
+          post.createdAt = moment(post.createdAt).format('DD MMMM YYYY');
+          post.relativeTime = moment(post.createdAt).fromNow();
+          return post;
+        })
+      });
+    });
+  });
+};
+
+/**
+ * @api {get} /api/posts Read posts of a specific user
+ * @apiName ReadPosts
+ * @apiGroup Post
+ * @apiParam {String} token Authentication token
+ * @apiParam {String} id User ID
+ * @apiParam {String} page Page (optional, default: 1)
+ *
+ * @apiSuccess {Boolean} success true
+ * @apiSuccess {Object} posts Posts for the specified user
+ *
+ * @apiError {Boolean} success false
+ * @apiError {String} message Error message
+ */
 exports.list = function(req, res) {
   if (!req.query.id) return res.json({ success: false, message: 'ID is required' });
   User.findById(req.query.id, function(err, user) {
     if (err) return res.send(err);
-    Follow.findOne({
-      follower: req.decoded._id,
-      followee: user._id,
-      status: 'accepted'
-    }, function(err, follow) {
+    if (!user) return res.json({ success: false, message: 'User not found' });
+    Follow.findOne({ follower: req.decoded._id, followee: user._id, status: 'accepted' }, function(err, follow) {
       if (err) return res.send(err);
       if (!follow && req.decoded._id != user._id && user.private) {
         return res.json({ success: false, message: 'This profile is private' });
@@ -119,27 +167,6 @@ exports.list = function(req, res) {
     });
   });
 }
-
-exports.feed = function(req, res) {
-  Follow.find({ follower: req.decoded._id, status: 'accepted' }, function(err, follows) {
-    if (err) return res.send(err);
-    const userIds = follows.map(function(follow) { return follow._id; });
-    userIds.push(req.decoded._id);
-    populatePosts({ user: { $in: userIds } }, req.decoded._id, req.query.page)
-    .exec(function(err, posts) {
-      if (err) return res.send(err);
-      moment.locale(req.decoded.language);
-      res.json({
-        success: true,
-        posts: posts.map(function(post) {
-          post.createdAt = moment(post.createdAt).format('DD MMMM YYYY');   
-          post.relativeTime = moment(post.createdAt).fromNow();   
-          return post;   
-        })
-      });
-    });
-  });
-};
 
 exports.validateNewPost = function(req, res, next) {
   var valid = true;
@@ -227,7 +254,7 @@ exports.create = function(req, res) {
  * @apiError {String} message Error message
  */
 exports.read = function(req, res) {
-  if (!req.query.id) return res.json({ success: false, message: 'Post ID is required' });
+  if (!req.query.id) return res.json({ success: false, message: 'ID is required' });
   Post
   .findById(req.query.id)
   .populate([
@@ -246,7 +273,7 @@ exports.read = function(req, res) {
 };
 
 exports.validateExistingPost = function(req, res, next) {
-  if (!req.body.id) return res.json({ success: false, message: 'Post ID is required' });
+  if (!req.body.id) return res.json({ success: false, message: 'ID is required' });
   var valid = true;
   Post
   .findById(req.body.id)

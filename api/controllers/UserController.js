@@ -398,7 +398,7 @@ function getPrivateUser(user) {
  * @apiError {String} message Error message
  */
 exports.read = function(req, res) {
-  if (!req.query.id) return res.json({ success: false, message: 'User ID is required' });
+  if (!req.query.id) return res.json({ success: false, message: 'ID is required' });
   User
   .findById(req.query.id)
   .populate([

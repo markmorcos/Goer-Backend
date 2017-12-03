@@ -8,9 +8,16 @@ var Comment = new Schema({
     type: Schema.Types.ObjectId,
     ref: 'User'
   },
-  post: {
-    type: Schema.Types.ObjectId,
-    ref: 'Post'
+  item: {
+    model: {
+      type: String,
+      enum: ['Post', 'Review'],
+      default: 'Post'
+    },
+    document: {
+      type: Schema.Types.ObjectId,
+      refPath: 'model'
+    }
   },
   text: String,
   mentions: [{
