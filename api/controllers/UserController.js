@@ -388,15 +388,16 @@ exports.resetPassword = function(req, res) {
  */
 exports.changePassword = function(req, res) {
   if (!req.body.password) return res.json({ success: false, message: 'Password is required' });
-  bcrypt.compare(req.body.password, req.decoded.password, function(err, match) {
+  const user = req.decoded;
+  bcrypt.compare(req.body.password, user.password, function(err, match) {
     if (err) return res.send(err);
     if (!match) return res.json({ success: false, message: 'Incorrect password' });
     if (!req.body.newPassword) return res.json({ success: false, message: 'New password is required' });
-    req.decoded.password = bcrypt.hashSync(newPassword, 10);
-    req.decoded.save(function(err, user) {
+    user.password = bcrypt.hashSync(newPassword, 10);
+    user.save(function(err, user) {
       if (err) return res.send(err);
       client.sendEmail({
-        to: req.decoded.email,
+        to: user.email,
         from: constants.from,
         subject: 'Goer',
         message: `Your new password is ${newPassword}.`,
