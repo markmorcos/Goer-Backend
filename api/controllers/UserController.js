@@ -393,7 +393,7 @@ exports.changePassword = function(req, res) {
     if (err) return res.send(err);
     if (!match) return res.json({ success: false, message: 'Incorrect password' });
     if (!req.body.newPassword) return res.json({ success: false, message: 'New password is required' });
-    user.password = bcrypt.hashSync(newPassword, 10);
+    user.password = bcrypt.hashSync(req.body.newPassword, 10);
     user.save(function(err, user) {
       if (err) return res.send(err);
       client.sendEmail({
