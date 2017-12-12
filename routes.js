@@ -49,6 +49,7 @@ module.exports = function(app) {
 	app.post('/api/facebook-sign-in', users.facebookSignIn);
 	app.post('/api/contact-business', verifyToken, users.contactBusiness);
 	app.post('/api/reset-password', users.resetPassword);
+	app.post('/api/change-password', users.changePassword);
 	app.get('/api/user', verifyToken, users.read);
 	app.get('/api/users', users.list);
 	app.put('/api/user', upload.single('picture'), verifyToken, users.validateExistingUser, users.update);

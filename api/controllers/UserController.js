@@ -236,8 +236,8 @@ exports.signIn = function(req, res) {
     if (!user) return res.json({ success: false, message: 'Incorrect email or password' });
     if (!user.approved) return res.json({ success: false, message: 'Account not approved yet' });
     bcrypt.compare(req.body.password, user.password, function(err, match) {
-      if (!match) return res.json({ success: false, message: 'Incorrect email or password' });
       if (err) return res.send(err);
+      if (!match) return res.json({ success: false, message: 'Incorrect email or password' });
       var token = jwt.sign(user.toObject(), process.env.JWT_SECRET);
       res.json({ success: true, user: user, token: token });
     });
@@ -245,7 +245,7 @@ exports.signIn = function(req, res) {
 };
 
 /**
- * @api {post} /api/facebook-sign-in Sign in existing user
+ * @api {post} /api/facebook-sign-in Sign in with Facebook
  * @apiName FacebookSignIn
  * @apiGroup User
  *
@@ -254,6 +254,7 @@ exports.signIn = function(req, res) {
  * @apiSuccess {Boolean} success true
  * @apiSuccess {Object} user Signed in user details
  * @apiSuccess {String} token Authentication token
+ * @apiSuccess {Array} friends Facebook friends who previously signed up
  *
  * @apiError {Boolean} success false
  * @apiError {String} message Error message
@@ -261,7 +262,7 @@ exports.signIn = function(req, res) {
 exports.facebookSignIn = function(req, res) {
   if (!req.body.accessToken) return res.json({ success: false, message: 'Facebook access token is required' });
   axios
-  .get(`https://graph.facebook.com/me?fields=id,first_name,last_name,email,picture{url},gender,locale,birthday&access_token=${req.body.accessToken}`)
+  .get(`https://graph.facebook.com/me?fields=id,first_name,last_name,email,picture{url},gender,locale,birthday,friends.limit(5000){id}&access_token=${req.body.accessToken}`)
   .then(function(response) {
     const profile = response.data;
     if (profile.error) return res.json({ success: false, message: profile.error.message });
@@ -283,7 +284,11 @@ exports.facebookSignIn = function(req, res) {
       : user.picture;
       user.save(function(err, user) {
         var token = jwt.sign(user.toObject(), process.env.JWT_SECRET);
-        res.json({ success: true, user: user, token: token });
+        const facebookIds = profile.friends.data.map(function(friend) { return friend.id; });
+        User.find({ facebook: { $in: facebookIds } }, 'name picture', function(err, users) {
+          if (err) return res.send(err);
+          res.json({ success: true, user: user, token: token, friends: users });
+        })
       });
     });
   })
@@ -367,6 +372,43 @@ exports.resetPassword = function(req, res) {
   });
 }
 
+/**
+ * @api {post} /api/change-password Change user password
+ * @apiName ChangePassword
+ * @apiGroup User
+ *
+ * @apiParam {String} token Authentication token
+ * @apiParam {String} password User current password
+ * @apiParam {String} newPassword User new password
+ *
+ * @apiSuccess {Boolean} success true
+ *
+ * @apiError {Boolean} success false
+ * @apiError {String} message Error message
+ */
+exports.changePassword = function(req, res) {
+  if (!req.body.password) return res.json({ success: false, message: 'Password is required' });
+  if (!req.body.newPassword) return res.json({ success: false, message: 'New password is required' });
+  bcrypt.compare(req.body.password, req.decoded.password, function(err, match) {
+    if (err) return res.send(err);
+    if (!match) return res.json({ success: false, message: 'Incorrect password' });
+    req.decoded.password = bcrypt.hashSync(newPassword, 10);
+    req.decoded.save(function(err, user) {
+      if (err) return res.send(err);
+      client.sendEmail({
+        to: req.decoded.email,
+        from: constants.from,
+        subject: 'Goer',
+        message: `Your new password is ${newPassword}.`,
+        altText: `Your new password is ${newPassword}.`,
+      }, function(err, data, response) {
+        if (err) return res.send(err);
+        res.json({ success: true });
+      });
+    });
+  });
+}
+
 exports.list = function(req, res) {
   User.find({}).sort([['name.first', 1], ['name.last', 1]]).exec(function(err, users) {
     if (err) return res.send(err);
@@ -438,8 +480,6 @@ exports.validateExistingUser = function(req, res, next) {
  * @apiParam {String} token Authentication token
  * @apiParam {String} id User ID (optional, default: signed in user ID)
  * @apiParam {File} picture Picture (optional)
- * @apiParam {String} email Email (optional)
- * @apiParam {String} password Password (optional)
  * @apiParam {String} phone Phone (optional)
  * @apiParam {String} description Description (optional)
  * @apiParam {String} language Language; en or ar (optional, default: en)
@@ -462,8 +502,6 @@ exports.validateExistingUser = function(req, res, next) {
  */
 exports.update = function(req, res) {
   const user = req.user;
-  user.email = req.body.email || user.email;
-  user.password = req.body.password ? bcrypt.hashSync(req.body.password, 10) : user.password;
   user.private = req.body.private || user.private;
   user.description = req.body.description || user.description;
   user.language = req.body.language || user.language;
