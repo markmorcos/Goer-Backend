@@ -373,7 +373,7 @@ exports.resetPassword = function(req, res) {
 }
 
 /**
- * @api {post} /api/change-password Change user password
+ * @api {put} /api/change-password Change user password
  * @apiName ChangePassword
  * @apiGroup User
  *
@@ -400,8 +400,8 @@ exports.changePassword = function(req, res) {
         to: user.email,
         from: constants.from,
         subject: 'Goer',
-        message: `Your new password is ${newPassword}.`,
-        altText: `Your new password is ${newPassword}.`,
+        message: `Your password has been changed successfully.`,
+        altText: `Your password has been changed successfully.`,
       }, function(err, data, response) {
         if (err) return res.send(err);
         res.json({ success: true });
