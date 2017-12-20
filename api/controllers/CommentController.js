@@ -38,7 +38,7 @@ exports.create = function(req, res) {
     ], function(err, comment) {
       if (err) return res.send(err);
       // TODO: send push notification
-      res.json({ success: true, comment: comment });
+      res.json({ success: true, data: { comment: comment } });
     });
   });
 };
@@ -90,7 +90,7 @@ exports.update = function(req, res) {
         { path: 'mentions', select: 'name picture' }
       ], function(err, comment) {
         if (err) return res.send(err);
-        res.json({ success: true, comment: comment });
+        res.json({ success: true, data: { comment: comment } });
       });
     });
   });

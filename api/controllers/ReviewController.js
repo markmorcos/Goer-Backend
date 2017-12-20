@@ -28,7 +28,7 @@ exports.list = function(req, res) {
     .sort('-createAt')
     .exec(function(err, reviews) {
       if (err) return res.send(err);
-      res.json({ success: true, reviews: reviews });
+      res.json({ success: true, data: { reviews: reviews } });
     });
   });
 };
@@ -73,7 +73,7 @@ exports.create = function(req, res) {
         ], function(err, reviews) {
           console.log(reviews);
           reviews.push({ rating: 0 });
-          res.json({ success: true, review: reviews.shift().rating || 0 });
+          res.json({ success: true, data: { review: reviews.shift().rating || 0 } });
         });
       });
     });
@@ -118,7 +118,7 @@ exports.update = function(req, res) {
         ], function(err, reviews) {
           console.log(reviews);
           reviews.push({ rating: 0 });
-          res.json({ success: true, review: Math.round(reviews.shift().rating * 100) / 100 || 0 });
+          res.json({ success: true, data: { review: Math.round(reviews.shift().rating * 100) / 100 || 0 } });
         });
       });
     });
@@ -153,7 +153,7 @@ exports.delete = function(req, res) {
           { $group: { _id: '$business', rating: { $avg: '$rating' } } }
         ], function(err, reviews) {
           reviews.push({ rating: 0 });
-          res.json({ success: true, review: Math.round(reviews.shift().rating * 100) / 100 || 0 });
+          res.json({ success: true, data: { review: Math.round(reviews.shift().rating * 100) / 100 || 0 } });
         });
       });
     });

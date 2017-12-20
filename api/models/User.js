@@ -15,8 +15,8 @@ var User = new Schema({
     last: String
   },
   location: {
-    latitude: Number,
-    longitude: Number
+    type: [Number],
+    index: '2dsphere'
   },
   email: String,
   password: String,

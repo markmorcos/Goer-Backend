@@ -29,7 +29,7 @@ exports.list = function(req, res) {
     options: { sort: { createdAt: -1 } }
   }).exec(function(err, follows) {
     if (err) return res.send(err);
-    res.json({ success: true, users: follows.map(function(follow) { return follow[key]; }) });
+    res.json({ success: true, data: { users: follows.map(function(follow) { return follow[key]; }) } });
   });
 };
 

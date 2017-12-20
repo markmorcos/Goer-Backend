@@ -30,7 +30,7 @@ exports.list = function(req, res) {
   ])
   .exec(function(err, saves) {
     if (err) return res.send(err);
-    res.json({ success: true, saves: saves });
+    res.json({ success: true, data: { saves: saves } });
   });
 }
 
@@ -65,7 +65,7 @@ exports.create = function(req, res) {
         return res.json({ success: false, message: 'Place already saved' });
       }
       Save.create({ user: req.decoded._id, business: user._id, type: req.body.type }, function(err, save) {
-        return res.json({ success: true, save: save });
+        return res.json({ success: true, data: { save: save } });
       });
     });
   });

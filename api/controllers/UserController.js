@@ -64,7 +64,7 @@ function populateUser(req, res, next) {
     picture: req.body.picture,
     name: { first: req.body.name || req.body.firstName, last: req.body.lastName },
     location: req.body.latitude && req.body.longitude
-    ? { latitude: req.body.latitude, longitude: req.body.longitude }
+    ? [req.body.latitude, req.body.longitude]
     : undefined,
     email: req.body.email,
     password: bcrypt.hashSync(req.body.password, 10),
@@ -144,7 +144,7 @@ exports.signUp = function(req, res) {
           { path: 'tags', select: 'name' },
         ], function(err, user) {
           if (err) return res.send(err);
-          res.json({ success: true, user: user });
+          res.json({ success: true, data: { user: user } });
         });
       });
     });
@@ -239,7 +239,7 @@ exports.signIn = function(req, res) {
       if (err) return res.send(err);
       if (!match) return res.json({ success: false, message: 'Incorrect email or password' });
       var token = jwt.sign(user.toObject(), process.env.JWT_SECRET);
-      res.json({ success: true, user: user, token: token });
+      res.json({ success: true, data: { user: user, token: token } });
     });
   });
 };
@@ -287,7 +287,7 @@ exports.facebookSignIn = function(req, res) {
         const facebookIds = profile.friends.data.map(function(friend) { return friend.id; });
         User.find({ facebook: { $in: facebookIds } }, 'name picture', function(err, users) {
           if (err) return res.send(err);
-          res.json({ success: true, user: user, token: token, friends: users });
+          res.json({ success: true, data: { user: user, friends: users, token: token } });
         })
       });
     });
@@ -410,10 +410,78 @@ exports.changePassword = function(req, res) {
   });
 }
 
-exports.list = function(req, res) {
-  User.find({}).sort([['name.first', 1], ['name.last', 1]]).exec(function(err, users) {
+/**
+ * @api {get} /api/search Search users or businesses
+ * @apiName ChangePassword
+ * @apiGroup User
+ *
+ * @apiParam {String} token Authentication token
+ * @apiParam {String} type Search type; people, tags and nearby
+ * @apiParam {String} query Search query
+ * @apiParam {String} tags Business tags (Tag IDs, tags type only)
+ * @apiParam {String} latitude Nearby location latitude (nearby type only)
+ * @apiParam {String} longitude Nearby location longitude (nearby type only)
+ *
+ * @apiSuccess {Boolean} success true
+ * @apiSuccess {Array} users Search result
+ *
+ * @apiError {Boolean} success false
+ * @apiError {String} message Error message
+ */
+exports.search = function(req, res) {
+  if (!req.query.type) return res.json({ success: false, message: 'Type is required' });
+  let query = req.query.query
+  ? {
+    $or: [
+      { 'name.first': { $regex: new RegExp('^.*' + req.query.query + '.*$', 'i') } },
+      { 'name.last': { $regex: new RegExp('^.*' + req.query.query + '.*$', 'i') } },
+      { 'fullName': { $regex: new RegExp('^.*' + req.query.query + '.*$', 'i') } }
+    ]
+  }
+  : { /* TODO: following */ };
+  const aggregate = [
+    {
+      $project: {
+        name: true,
+        picture: true,
+        role: true,
+        tags: true,
+        distance: true,
+        fullName: { $concat: ['$name.first', ' ', '$name.last'] }
+      }
+    },
+    { $sort: { distance: 1 } }
+  ];
+  switch (req.query.type) {
+    case 'people':
+      query.role = 'user';
+      break;
+    case 'tags':
+      if (!req.query.tags) return res.json({ success: false, message: 'Tags is required' });
+      query.role = 'business';
+      query.tags = { $in: req.query.tags.map(function(tag) { return mongoose.Types.ObjectId(tag); }) };
+      break;
+    case 'nearby':
+      if (!req.query.latitude || !req.query.longitude) {
+        return res.json({ success: false, message: 'Location is required' });
+      }
+      aggregate.unshift({
+        $geoNear: {
+          near: { type: 'Point', coordinates: [Number(req.query.latitude), Number(req.query.longitude)] },
+          distanceField: 'distance',
+          spherical: true
+        }
+      });
+      query.role = 'business';
+      break;
+    default:
+      return res.json({ success: false, message: 'Type should be either people, tags or nearby' });
+  }
+  aggregate.push({ $match: query });
+  aggregate.push({ $project: { name: true, picture: true } });
+  User.aggregate(aggregate, function(err, users) {
     if (err) return res.send(err);
-    res.json({ success: true, users: users });
+    res.json({ success: true, data: { users: users } });
   });
 };
 
@@ -452,9 +520,9 @@ exports.read = function(req, res) {
     if (err) return res.send(err);
     if (!user) return res.json({ success: false, message: 'User not found' });
     if (user.private) {
-      return res.json({ success: true, user: getPrivateUser(user.toObject()) });
+      return res.json({ success: true, data: { user: getPrivateUser(user.toObject()) } });
     }
-    res.json({ success: true, user: user });
+    res.json({ success: true, data: { user: user } });
   });
 };
 
@@ -514,7 +582,7 @@ exports.update = function(req, res) {
   switch (user.role) {
     case 'business':
       user.location = req.body.latitude && req.body.longitude
-      ? { latitude: req.body.latitude, longitude: req.body.longitude }
+      ? [req.body.latitude, req.body.longitude]
       : user.location;
       user.tags = req.body.tags === undefined ? user.tags : req.body.tags || [];      
       break;
@@ -544,7 +612,7 @@ exports.update = function(req, res) {
       { path: 'tags', select: 'name' }
     ], function(err, user) {
       if (err) return res.send(err);
-      res.json({ success: true, user: user });
+      res.json({ success: true, data: { user: user } });
     });  
   });
 };

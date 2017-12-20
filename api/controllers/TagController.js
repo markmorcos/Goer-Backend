@@ -17,7 +17,7 @@ var Tag = mongoose.model('Tag');
 exports.list = function(req, res) {
   Tag.find({}).sort('name').exec(function(err, tags) {
     if (err) return res.send(err);
-    res.json({ success: true, tags: tags });
+    res.json({ success: true, data: { tags: tags } });
   });
 };
 
@@ -43,7 +43,7 @@ exports.create = function(req, res) {
   var tag = new Tag({ name: req.body.name });
   tag.save(function(err, tag) {
     if (err) return res.send(err);
-    res.json({ success: true, tag: tag });
+    res.json({ success: true, data: { tag: tag } });
   });
 };
 
@@ -71,7 +71,7 @@ exports.update = function(req, res) {
     tag.name = req.body.name || tag.name;
     tag.save(function(err, tag) {
       if (err) return res.send(err);
-      res.json({ success: true, tag: tag });
+      res.json({ success: true, data: { tag: tag } });
     });
   });
 };

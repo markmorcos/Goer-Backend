@@ -21,7 +21,7 @@ exports.list = function(req, res) {
       a[b.slug] = { title: b.title, text: b.text };
       return a;
     }, {});    
-    res.json({ success: true, statics: statics });
+    res.json({ success: true, data: { statics: statics } });
   });
 };
 

@@ -233,7 +233,7 @@ exports.create = function(req, res) {
         { path: 'mentions', select: 'name picture' }
       ], function(err, post) {
         if (err) return res.send(err);
-        res.json({ success: true, post: post });
+        res.json({ success: true, data: { post: post } });
       });
     });
   });
@@ -268,7 +268,7 @@ exports.read = function(req, res) {
     if (req.decoded._id != post.user._id && post.user.private) {
       return res.json({ success: false, message: 'This post is private' });
     }
-    res.json({ success: true, post: post });
+    res.json({ success: true, data: { post: post } });
   });
 };
 
@@ -344,7 +344,7 @@ exports.update = function(req, res) {
       { path: 'mentions', select: 'name picture' }
     ], function(err, post) {
       if (err) return res.send(err);
-      res.json({ success: true, post: post });
+      res.json({ success: true, data: { post: post } });
     })
   });
 };

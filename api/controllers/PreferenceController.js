@@ -17,7 +17,7 @@ var Preference = mongoose.model('Preference');
 exports.list = function(req, res) {
   Preference.find({}).sort('name').exec(function(err, preferences) {
     if (err) return res.send(err);
-    res.json({ success: true, preferences: preferences });
+    res.json({ success: true, data: { preferences: preferences } });
   });
 };
 
@@ -43,7 +43,7 @@ exports.create = function(req, res) {
   var preference = new Preference({ name: req.body.name });
   preference.save(function(err, preference) {
     if (err) return res.send(err);
-    res.json({ success: true, preference: preference });
+    res.json({ success: true, data: { preference: preference } });
   });
 };
 
@@ -71,7 +71,7 @@ exports.update = function(req, res) {
     preference.name = req.body.name || preference.name;
     preference.save(function(err, preference) {
       if (err) return res.send(err);
-      res.json({ success: true, preference: preference });
+      res.json({ success: true, data: { preference: preference } });
     });
   });
 };

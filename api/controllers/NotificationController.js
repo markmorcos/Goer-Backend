@@ -35,6 +35,6 @@ exports.list = function(req, res) {
         relativeTime: moment(notification.createdAt).fromNow()
       };
     });
-    res.json({ success: true, notifications: notifications });
+    res.json({ success: true, data: { notifications: notifications } });
   });
 };
