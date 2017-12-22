@@ -2,6 +2,7 @@ var jwt = require('jsonwebtoken');
 var multer  = require('multer');
 var upload = multer({ dest: './public/uploads' });
 
+var Session = require('./api/models/Session');
 var User = require('./api/models/User');
 var Save = require('./api/models/Save');
 var Preference = require('./api/models/Preference');
@@ -14,6 +15,7 @@ var Comment = require('./api/models/Comment');
 var Notification = require('./api/models/Notification');
 var Static = require('./api/models/Static');
 
+var sessions = require('./api/controllers/SessionController');
 var users = require('./api/controllers/UserController');
 var saves = require('./api/controllers/SaveController');
 var preferences = require('./api/controllers/PreferenceController');
@@ -31,22 +33,29 @@ function verifyToken(req, res, next) {
   if (!token) return res.json({ success: false, message: 'Authentication failed' });
   jwt.verify(token, process.env.JWT_SECRET, function(err, decoded) {
     if (err) return res.json({ success: false, message: 'Authentication failed' });
-    User.findById(decoded._id, function(err, user) {
+    Session.findOne({ user: decoded._id, token: token }, function(err, session) {
       if (err) return res.send(err);
-      if (!user) return res.json({ success: false, message: 'Authentication failed' });
-      req.decoded = user;
-      next();
-    });
+      if (!session) return res.json({ success: false, message: 'Authentication failed' });
+	    User.findById(decoded._id, function(err, user) {
+	      if (err) return res.send(err);
+	      if (!user) return res.json({ success: false, message: 'Authentication failed' });
+	      req.decoded = user;
+	      next();
+	    });
+    })
   });
 }
 
 module.exports = function(app) {
+	// Session
+	app.post('/api/sign-in', sessions.signIn);
+	app.post('/api/facebook-sign-in', sessions.facebookSignIn);
+	app.delete('/api/sign-out', verifyToken, sessions.signOut);
+
 	// User
 	app.post( '/api/sign-up', upload.single('picture'), users.validateNewUser, users.signUp);
 	app.post('/api/resend-confirmation', users.resendConfirmation);
 	app.post('/api/confirm-user', users.confirmUser);
-	app.post('/api/sign-in', users.signIn);
-	app.post('/api/facebook-sign-in', users.facebookSignIn);
 	app.post('/api/contact-business', verifyToken, users.contactBusiness);
 	app.post('/api/reset-password', users.resetPassword);
 	app.get('/api/search', users.search);

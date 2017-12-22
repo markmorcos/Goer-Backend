@@ -8,6 +8,13 @@ var morgan = require('morgan');
 var mongoose = require('mongoose');
 var bodyParser = require('body-parser');
 var spawn = require('child_process').spawn;
+var admin = require('firebase-admin');
+
+var serviceAccount = require("./api/util/firebase-admin.json");
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  databaseURL: "https://mark-morcos.firebaseio.com"
+});
 
 app.use(morgan('dev'));
 app.use(bodyParser.urlencoded({ extended: true }));

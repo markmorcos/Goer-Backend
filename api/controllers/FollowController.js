@@ -3,6 +3,9 @@
 var mongoose = require('mongoose');
 var Follow = mongoose.model('Follow');
 var Notification = mongoose.model('Notification');
+var Session = mongoose.model('Session');
+var admin = require('firebase-admin');
+var i18n = require('../util/i18n')
 
 /**
  * @api {get} /api/follows Read all follows
@@ -40,6 +43,7 @@ exports.list = function(req, res) {
  *
  * @apiParam {String} token Authentication token
  * @apiParam {String} id User ID to follow
+ * @apiParam {String} registrationToken Device's Firebase registration token
  *
  * @apiSuccess {Boolean} success true
  *
@@ -70,8 +74,31 @@ exports.follow = function(req, res) {
         receiver: req.body.id
       }, function(err, notification) {
         if (err) return res.send(err);
-        // TODO: send push notification
         res.json({ success: true });
+        Session
+        .find({ user: req.body.id })
+        .populate('user')
+        .exec(function(err, sessions) {
+          if (err) return res.send(err);
+          sessions.forEach(function(session) {
+            const user = session.user;
+            const fullName = user.name.first + ' ' + user.name.last;
+            var payload = {
+              notification: {
+                title: i18n[user.language]['accept'].title(user).replace(`[[${user._id}]]`, fullName),
+                body: i18n[user.language]['accept'].body(user).replace(`[[${user._id}]]`, fullName)
+              }
+            };
+            admin.messaging().sendToDevice(session.registrationToken, payload)
+            .then(function(response) {
+              console.log('Successfully sent message:', response);
+              if (response.failureCount) session.remove();
+            })
+            .catch(function(error) {
+              console.log('Error sending message:', error);
+            });
+          });
+        });
       })  
     });
   });
@@ -109,8 +136,31 @@ exports.accept = function(req, res) {
         receiver: req.body.id
       }, function(err, notification) {
         if (err) return res.send(err);
-        // TODO: send push notification
         res.json({ success: true });
+        Session
+        .find({ user: req.body.id })
+        .populate('user')
+        .exec(function(err, sessions) {
+          if (err) return res.send(err);
+          sessions.forEach(function(session) {
+            const user = session.user;
+            const fullName = user.name.first + ' ' + user.name.last;
+            var payload = {
+              notification: {
+                title: i18n[user.language]['accept'].title(user).replace(`[[${user._id}]]`, fullName),
+                body: i18n[user.language]['accept'].body(user).replace(`[[${user._id}]]`, fullName)
+              }
+            };
+            admin.messaging().sendToDevice(session.registrationToken, payload)
+            .then(function(response) {
+              console.log('Successfully sent message:', response);
+              if (response.failureCount) session.remove();
+            })
+            .catch(function(error) {
+              console.log('Error sending message:', error);
+            });
+          });
+        });
       })  
     });
   });

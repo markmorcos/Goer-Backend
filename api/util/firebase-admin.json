@@ -1,0 +1,12 @@
+{
+  "type": "service_account",
+  "project_id": "mark-morcos",
+  "private_key_id": "cefb8f8cadc51b233392c477e41a5cef723d2d58",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDCoFFEwd8pDHSw\nSlhxJPoAkBIiygyNIR7mWIndRu1vtLdiXRkmdW/ZT6x8XTw9CYr7yu3WpkONTXad\nySKqkZOZUZck5xYDcYsHT8SsQxl3DNVKYuKu9hJF1bomm4ncXfm2qV0rfcuMMuqv\nCmzr834QTnWlUDJAxFWP6aUBLHFSjk38WVie5MUSAu5XWOdEqWDsYiKmGw0AHOGZ\nG5wR2EO4x8Ffju15izVIbP0mB00hr+7fdkRoX5pMWVh6NEOzlb0IX8IRVPpSiL48\nuzpZO5MJgC4Z256k8AZ4NpbfxhEyh84e6wYuAoyqzuirbHEYT+35crKvzcyZSZQk\n+pamlSldAgMBAAECggEAW3ecugOjLVd9P5yxE/ucwsbyvwbV/z2hl//kSuoajHUR\n+lhmiXyHpEmddpUaylTBzLQCMu7QsIfHR0BP2nmwNE30CpPP9K5X+Ie0loCyZxDQ\n7LSsdC2RSOC5K4vNrpM72GygLOBh2PHU+Y6cwgcdJ+y3vYmDFI0w6QGVWofYekMz\n+6A/DlyMfvEIy0/mCPc7xi5FW4w+QufOh+HwkouiDT679Iwidl4EWWqF2h/mpG2l\nYB0MqtSvRrI3i0RNI7ZCX+8/p6Hb2XkH9+B1LP+wXLCyYS0TTLf51BnYIXRAZu5z\nFakDgmvhFam8RiCnnUE528QTDjh3u7wfX0FX7f0qwQKBgQD1xO6qUT8rYWOZgJGC\n+XgfZfSsfEuKxSQ2Q5Y6Bcevj1u4Atory0muGmm0jv1NF+zT4zEBikVrNy5j2HbM\n6d28Wq9GJ0Za80wHZkOpaCCrV0bxS/SD9VHCjdPniwPps8znFOmCyDOmqfAi8M04\n68a8ZSi3Im0fLDDDD+HUvkjgPwKBgQDKul+v6SUtedouK41l8ulnUJ4J9pjnCqWK\nWxpCF8yVjQXTeaFIPiTYxaCc/4Tfr7G8UTqmJLUHn7pUiU4VggKw1bR6INXO4x6l\nrMWncBE4DOlz+nU666J3agXCHw/Nosdz+J32eCpdR6mPvMZ4KHkLCbvUTVCrZXwQ\n0lTO0A1PYwKBgQDLF+MV8a/e3ErfFaSpdBf08l7fjpMqaMEE6pMg/ZfHFxN3GzxJ\nBmOrsP37DFJ7u7KkYlEj8axt7hqyvbVmnjfzJ4lB0sDL9dO1JafyPS8KCESCr/6u\ncTIQMP2UkIc6P6+qodhZj7FHH5VmelFMoWIIWxvrQlKkePMOrngzQs+cJwKBgBZ0\nXELkxQxrccIpasj/BeE+qbKa0MbOhBV2D8uATVXHP/zzfOy+jWBBS4/4MWSBVmNw\nb9mVOUP16jKQ3sg9FUU29n2Mg4Id3/gj0eTA4fdeXsFM3Y1AKkelw6uDu0FgpUzw\nHbb+Cls4o8xa8XS/ruCNHHPgeG3zmLFYSrJ5ku/XAoGAadK0W8EV/BwEf0SK4lnq\nhsnnLMkqCtvPymLVqjFV1W9Yx+FFmQTCMqGPdl64gX8SGgrGQ4OBe2XTNdacVFiT\n+Pti/TNggV1QJcZbE26Z+1t1WYWnoAdSt06URMoGB/vdBFfciGu2NR/rSMQygTx+\nL/2bwKXZSaZMQs6YaGWeRQk=\n-----END PRIVATE KEY-----\n",
+  "client_email": "firebase-adminsdk-ouhax@mark-morcos.iam.gserviceaccount.com",
+  "client_id": "106718461968890856166",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://accounts.google.com/o/oauth2/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-ouhax%40mark-morcos.iam.gserviceaccount.com"
+}
