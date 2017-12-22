@@ -125,7 +125,7 @@ exports.facebookSignIn = function(req, res) {
  * @apiName SignOut
  * @apiGroup Session
  *
- * @apiSuccess {String} token Authentication token
+ * @apiParam {String} token Authentication token
  *
  * @apiSuccess {Boolean} success true
  *
