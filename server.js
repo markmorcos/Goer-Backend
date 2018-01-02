@@ -24,9 +24,9 @@ app.use(bodyParser.json({ limit: '5mb' }));
 mongoose.Promise = global.Promise;
 mongoose.connect('mongodb://localhost/goer', { useMongoClient: true });
 
-app.use('/admin', express.static('../admin/dist'))
+app.use('/admin', express.static('admin/dist'))
 app.get('/admin*', function(req, res) {
-  return res.sendFile(path.join(__dirname, '../admin/dist/index.html'));
+  return res.sendFile(path.join(__dirname, 'admin/dist/index.html'));
 });
 
 app.use(express.static('public'));
