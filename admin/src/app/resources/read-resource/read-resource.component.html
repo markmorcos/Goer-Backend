@@ -1,0 +1,20 @@
+<div class="table-responsive">
+  <table class="table table-striped">
+    <thead *ngIf="!resource && loading">
+      <tr><td>Loading...</td></tr>
+    </thead>
+    <tbody *ngIf="resource">
+      <tr>
+        <th>ID</th>
+        <td>{{ resource._id }}</td>
+      </tr>
+      <tr *ngFor="let field of fields">
+        <th>{{ field.placeholder }}</th>
+        <td>{{ resource[field.name] }}</td>
+      </tr>
+    </tbody>
+  </table>
+  <a class="btn btn-primary btn-xs" routerLink="edit">Edit</a>
+  <a class="btn btn-danger btn-xs" (click)="onDelete()">Delete</a>
+</div>
+  

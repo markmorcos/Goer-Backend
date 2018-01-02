@@ -1,0 +1,26 @@
+<div class="table-responsive">
+  <div *ngIf="loading">Loading...</div>
+  <form *ngIf="!loading" (ngSubmit)="onSubmit()" [formGroup]="form">
+    <div class="form-group">
+      <span *ngFor="let field of fields">
+        <label [for]="field.name">{{ field.placeholder }}</label>
+        <span [ngSwitch]="field.type">
+          <input *ngSwitchCase="'text'"
+            [id]="field.name"
+            [name]="field.name"
+            [type]="field.type"
+            [placeholder]="field.placeholder"
+            [formControlName]="field.name"
+            class="form-control"
+          />
+        </span>
+      </span>
+    </div>
+    <div class="form-group">
+      <button *ngIf="action === 'add'" class="btn btn-success btn-xs" type="submit">Create</button>
+      <button *ngIf="action === 'edit'" class="btn btn-primary btn-xs" type="submit">Update</button>
+      <a class="btn btn-danger btn-xs" (click)="onCancel()">Cancel</a>
+    </div>
+  </form>
+</div>
+  

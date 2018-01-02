@@ -1,0 +1,42 @@
+<div class="container">
+  <form class="form-signin" (ngSubmit)="onSignIn(form)" #form="ngForm">
+    <h2 class="form-signin-heading">Admin Panel</h2>
+    <div *ngIf="error" class="alert alert-danger">{{ error }}</div>
+    <label for="email" class="sr-only">Email</label>
+    <input
+      id="email"
+      name="email"
+      type="email"
+      class="form-control"
+      placeholder="Email"
+      ngModel
+      required
+      autofocus
+    />
+    <label for="password" class="sr-only">Password</label>
+    <input
+      id="password"
+      name="password"
+      type="password"
+      class="form-control"
+      placeholder="Password"
+      ngModel
+      required
+    />
+    <div class="checkbox">
+      <label>
+        <input type="checkbox" value="remember-me"> Remember
+      </label>
+    </div>
+    <div class="status" [ngSwitch]="loading">
+      <i *ngSwitchCase="true" class="fa fa-spinner fa-spin"></i>
+      <button
+        *ngSwitchDefault
+        class="btn btn-lg btn-primary btn-block"
+        type="submit"
+      >
+        Sign In
+      </button>
+    </div>
+  </form>
+</div>

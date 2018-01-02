@@ -1,0 +1,23 @@
+<div class="table-responsive">
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th *ngFor="let field of fields">{{ field.placeholder }}</th>
+        <th>Options</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngIf="loading"><td colspan="2">Loading...</td></tr>
+      <tr *ngIf="!resources && !loading"><td colspan="2">No resources yet</td></tr>
+      <tr *ngFor="let resource of resources">
+        <td><a [routerLink]="[resource._id]">{{ resource._id }}</a></td>
+        <td *ngFor="let field of fields">{{ resource[field.name] }}</td>
+        <td>
+          <a [routerLink]="[resource._id, 'edit']" class="btn btn-primary btn-xs">Edit</a>
+          <a (click)="onDelete(resource._id)" class="btn btn-danger btn-xs">Delete</a>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>

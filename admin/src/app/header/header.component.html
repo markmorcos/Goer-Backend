@@ -1,0 +1,47 @@
+<nav class="navbar navbar-inverse navbar-fixed-top">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" routerLink="/dashboard">Admin Panel</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav navbar-right">
+        <li routerLinkActive="active"><a class="active" routerLink="/dashboard">Dashboard</a></li>
+        <!-- <li><a href="#">Profile</a></li> -->
+        <li><a (click)="onSignOut()">Sign Out</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<div id="main" class="container-fluid">
+  <div class="row">
+    <div class="col-sm-3 col-md-2 sidebar">
+      <ul class="nav nav-sidebar">
+        <li routerLinkActive="active"><a routerLink="/dashboard">Overview <span class="sr-only">(current)</span></a></li>
+        <!-- <li><a href="#">Reports</a></li>
+        <li><a href="#">Analytics</a></li>
+        <li><a href="#">Export</a></li> -->
+      </ul>
+      <!-- <ul class="nav nav-sidebar">
+        <li><a routerLink="/admins">Admins</a></li>
+        <li><a href="">Users</a></li>
+        <li><a href="">Businesses</a></li>
+      </ul> -->
+      <ul class="nav nav-sidebar">
+        <li routerLinkActive="active"><a routerLink="/tags">Tags</a></li>
+        <li routerLinkActive="active"><a routerLink="/statics">Statics</a></li>
+        <!-- <li><a href="">Feedback</a></li> -->
+      </ul>
+    </div>
+    <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
+      <div *ngIf="error" class="alert alert-danger">{{ error }}</div>
+      <ng-content></ng-content>
+    </div>
+  </div>
+</div>  
