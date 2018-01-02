@@ -13,7 +13,7 @@ var User = mongoose.model('User');
  *
  * @apiParam {String} email User email
  * @apiParam {String} password User password
- * @apiSuccess {String} registrationToken Firebase registration token
+ * @apiParam {String} registrationToken Firebase registration token
  *
  * @apiSuccess {Boolean} success true
  * @apiSuccess {Object} user Signed in user details
@@ -23,22 +23,21 @@ var User = mongoose.model('User');
  * @apiError {String} message Error message
  */
 exports.signIn = function(req, res) {
-  if (!req.body.email) return res.json({ success: false, message: 'Email is required' });
-  if (!req.body.password) return res.json({ success: false, message: 'Password is required' });
-  if (!req.body.registrationToken) return res.json({ success: false, message: 'Registration token is required' });
+  if (!req.body.email) return res.status(400).json({ success: false, message: 'Email is required' });
+  if (!req.body.password) return res.status(400).json({ success: false, message: 'Password is required' });
   User
   .findOne({ email: req.body.email })
-  .populate([
-    { path: 'preferences', select: 'name' },
-    { path: 'tags', select: 'name' }
-  ])
+  .populate([{ path: 'tags', select: 'name' }])
   .exec(function(err, user) {
     if (err) return res.send(err);
-    if (!user) return res.json({ success: false, message: 'Incorrect email or password' });
-    if (!user.approved) return res.json({ success: false, message: 'Account not approved yet' });
+    if (!user) return res.status(401).json({ success: false, message: 'Incorrect email or password' });
+    if (!user.approved) return res.status(401).json({ success: false, message: 'Account not approved yet' });
+    if (user.role !== 'admin' && !req.body.registrationToken) {
+      return res.status(400).json({ success: false, message: 'Registration token is required' });
+    }
     bcrypt.compare(req.body.password, user.password, function(err, match) {
       if (err) return res.send(err);
-      if (!match) return res.json({ success: false, message: 'Incorrect email or password' });
+      if (!match) return res.status(401).json({ success: false, message: 'Incorrect email or password' });
       var token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET);
       Session.findOne({ user: user._id, registrationToken: req.body.registrationToken }, function(err, session) {
         if (err) return res.send(err);
@@ -72,12 +71,12 @@ exports.signIn = function(req, res) {
  * @apiError {String} message Error message
  */
 exports.facebookSignIn = function(req, res) {
-  if (!req.body.accessToken) return res.json({ success: false, message: 'Facebook access token is required' });
+  if (!req.body.accessToken) return res.status(400).json({ success: false, message: 'Facebook access token is required' });
   axios
   .get(`https://graph.facebook.com/me?fields=id,first_name,last_name,email,picture{url},gender,locale,birthday,friends.limit(5000){id}&access_token=${req.body.accessToken}`)
   .then(function(response) {
     const profile = response.data;
-    if (profile.error) return res.json({ success: false, message: profile.error.message });
+    if (profile.error) return res.status(400).json({ success: false, message: profile.error.message });
     const language = profile.locale.split('_')[0];
     User.findOneOrCreate({ email: profile.email }, {
       name: { first: profile.first_name, last: profile.last_name },
@@ -116,7 +115,7 @@ exports.facebookSignIn = function(req, res) {
     });
   })
   .catch(function(err) {
-    res.json({ success: false, message: err.response.data.error.message });
+    res.status(400).json({ success: false, message: err.response.data.error.message });
   })
 };
 
@@ -133,9 +132,11 @@ exports.facebookSignIn = function(req, res) {
  * @apiError {String} message Error message
  */
 exports.signOut = function(req, res) {
-  Session.findOne({ user: req.decoded._id, token: req.body.token }, function(err, session) {
+  var token = req.body.token || req.query.token || req.params.token || req.headers['x-access-token'];
+  Session.findOne({ user: req.decoded._id, token: token }, function(err, session) {
     if (err) return res.send(err);
-    if (!session) return res.json({ success: false, message: 'You are already signed out' });
+    console.log(session);
+    if (!session) return res.status(400).json({ success: false, message: 'You are already signed out' });
     session.remove(function(err, session) {
       if (err) return res.send(err);
       res.json({ success: true });

@@ -9,8 +9,9 @@ var mongoose = require('mongoose');
 var bodyParser = require('body-parser');
 var spawn = require('child_process').spawn;
 var admin = require('firebase-admin');
+var path = require('path');
 
-var serviceAccount = require("./api/util/firebase-admin.json");
+var serviceAccount = require("./util/firebase-admin.json");
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
   databaseURL: "https://mark-morcos.firebaseio.com"
@@ -23,15 +24,20 @@ app.use(bodyParser.json({ limit: '5mb' }));
 mongoose.Promise = global.Promise;
 mongoose.connect('mongodb://localhost/goer', { useMongoClient: true });
 
+app.use('/admin', express.static('../admin/dist'))
+app.get('/admin*', function(req, res) {
+  return res.sendFile(path.join(__dirname, '../admin/dist/index.html'));
+});
+
 app.use(express.static('public'));
 
-app.all('*', function(req, res, next) {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-  res.header("Access-Control-Allow-Methods","PUT,POST,GET,DELETE,OPTIONS");
-  res.header("Content-Type", "application/json;charset=utf-8");
-  next();
-});
+// app.all('*', function(req, res, next) {
+//   res.header("Access-Control-Allow-Origin", "*");
+//   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+//   res.header("Access-Control-Allow-Methods","PUT,POST,GET,DELETE,OPTIONS");
+//   res.header("Content-Type", "application/json;charset=utf-8");
+//   next();
+// });
 
 app.post('/deploy', function (req, res) {
   spawn('sh', ['./public/deploy.sh']);

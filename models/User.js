@@ -47,15 +47,15 @@ var User = new Schema({
     default: false
   },
   facebook: String,
-  preferences: [{
-    type: Schema.Types.ObjectId,
-    ref: 'Preference'
-  }],
   tags: [{
     type: Schema.Types.ObjectId,
     ref: 'Tag'
   }]
-}, { timestamps: true });
+}, { timestamps: true, toObject: { virtuals: true }, toJSON: { virtuals: true } });
+
+User.virtual('fullName').get(function () {
+  return this.name.last ? this.name.first + ' ' + this.name.last : this.name;
+});
 
 User.statics.findOneOrCreate = function findOneOrCreate(condition, doc, callback) {
   const self = this;

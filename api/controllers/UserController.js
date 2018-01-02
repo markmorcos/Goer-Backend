@@ -8,8 +8,8 @@ var axios = require('axios');
 var moment = require('moment');
 var ses = require('node-ses');
 
-var fs = require('../util/fs');
-var constants = require('../util/constants');
+var fs = require('../../util/fs');
+var constants = require('../../util/constants');
 
 var client = ses.createClient({
   amazon: constants.endpoint,
@@ -33,6 +33,14 @@ exports.validateNewUser = function(req, res, next) {
       valid = false, res.json({ success: false, message: 'Password is required' });
     }
     switch (req.body.role) {
+      case 'user':
+        if (valid && !req.body.firstName) {
+          valid = false, res.json({ success: false, message: 'First name is required' });
+        }
+        if (valid && !req.body.lastName) {
+          valid = false, res.json({ success: false, message: 'Last name is required' });
+        }
+        break;
       case 'business':
         if (valid && !req.body.name) {
           valid = false, res.json({ success: false, message: 'Name is required' });
@@ -44,14 +52,6 @@ exports.validateNewUser = function(req, res, next) {
           valid = false, res.json({ success: false, message: 'Location is required' });
         }
         break;
-      default:
-        if (valid && !req.body.firstName) {
-          valid = false, res.json({ success: false, message: 'First name is required' });
-        }
-        if (valid && !req.body.lastName) {
-          valid = false, res.json({ success: false, message: 'Last name is required' });
-        }
-        break;
     }
     if (!valid && req.file) fs.delete(req.file.path);
     return next();
@@ -61,7 +61,7 @@ exports.validateNewUser = function(req, res, next) {
 function populateUser(req, res, next) {
   var user = new User({
     picture: req.body.picture,
-    name: { first: req.body.name || req.body.firstName, last: req.body.lastName },
+    name: req.body.name || { first: req.body.firstName, last: req.body.lastName },
     location: req.body.latitude && req.body.longitude
     ? [req.body.latitude, req.body.longitude]
     : undefined,
@@ -114,8 +114,7 @@ function sendConfirmation(user, next) {
  * @apiParam {String} description Description (optional)
  * @apiParam {String} language Language; en or ar (optional, default: en)
  * @apiParam {String} facebook (optional)
- * @apiParam {Array} preferences Preferences (optional, user only)
- * @apiParam {Array} tags Tags (optional, business only)
+ * @apiParam {Array} tags Tags (optional)
  * @apiParam {String} firstName User first name (user only)
  * @apiParam {String} lastName User last name (user only)
  * @apiParam {String} gender User gender; male or female (optional, default: male, user only)
@@ -138,10 +137,7 @@ exports.signUp = function(req, res) {
       if (err) return res.send(err);
       sendConfirmation(user, function(err, data, response) {
         if (err) return res.send(err);
-        User.populate(user, [
-          { path: 'preferences', select: 'name' },
-          { path: 'tags', select: 'name' },
-        ], function(err, user) {
+        User.populate(user, [{ path: 'tags', select: 'name' }], function(err, user) {
           if (err) return res.send(err);
           res.json({ success: true, data: { user: user } });
         });
@@ -327,7 +323,7 @@ exports.changePassword = function(req, res) {
  * @apiParam {String} token Authentication token
  * @apiParam {String} type Search type; people, tags and nearby
  * @apiParam {String} query Search query
- * @apiParam {Array} tags Business tags (Tag IDs, tags type only)
+ * @apiParam {Array} tags Tags (Tag IDs, tags type only)
  * @apiParam {Number} latitude Nearby location latitude (nearby type only)
  * @apiParam {Number} longitude Nearby location longitude (nearby type only)
  *
@@ -404,7 +400,7 @@ function getPrivateUser(user) {
 }
 
 /**
- * @api {get} /api/user Read user profile
+ * @api {get} /api/read-profile Read user profile
  * @apiName ReadUser
  * @apiGroup User
  *
@@ -421,10 +417,7 @@ exports.read = function(req, res) {
   if (!req.query.id) return res.json({ success: false, message: 'ID is required' });
   User
   .findById(req.query.id)
-  .populate([
-    { path: 'preferences', select: 'name' },
-    { path: 'tags', select: 'name' }
-  ])
+  .populate([{ path: 'tags', select: 'name' }])
   .exec(function(err, user) {
     if (err) return res.send(err);
     if (!user) return res.json({ success: false, message: 'User not found' });
@@ -451,7 +444,7 @@ exports.validateExistingUser = function(req, res, next) {
 }
 
 /**
- * @api {put} /api/user Update existing user
+ * @api {put} /api/update-profile Update user profile
  * @apiName UpdateUser
  * @apiGroup User
  *
@@ -462,7 +455,6 @@ exports.validateExistingUser = function(req, res, next) {
  * @apiParam {String} description Description (optional)
  * @apiParam {String} language Language; en or ar (optional, default: en)
  * @apiParam {String} facebook (optional)
- * @apiParam {Array} preferences Preferences (optional, user only)
  * @apiParam {Array} tags Tags (optional, business only)
  * @apiParam {String} firstName User first name (optional, user only)
  * @apiParam {String} lastName User last name (optional, user only)
@@ -488,18 +480,17 @@ exports.update = function(req, res) {
     first: req.body.name || req.body.firstName || user.name.first,
     last: req.body.lastName || user.name.last
   };
+  user.tags = req.body.tags === undefined ? user.tags : req.body.tags || [];      
   switch (user.role) {
     case 'business':
       user.location = req.body.latitude && req.body.longitude
       ? [req.body.latitude, req.body.longitude]
       : user.location;
-      user.tags = req.body.tags === undefined ? user.tags : req.body.tags || [];      
       break;
     case 'user':
       user.gender = req.body.gender || user.gender;
       user.birthdate = req.body.birthdate || user.birthdate;
       user.facebook = req.body.facebook === undefined ? user.facebook : req.body.facebook;
-      user.preferences = req.body.preferences === undefined ? user.preferences : req.body.preferences || [];      
       break;
     default:
       break;
@@ -516,10 +507,7 @@ exports.update = function(req, res) {
   }
   user.save(function(err, user) {
     if (err) return res.send(err);
-    User.populate(user, [
-      { path: 'preferences', select: 'name' },
-      { path: 'tags', select: 'name' }
-    ], function(err, user) {
+    User.populate(user, [{ path: 'tags', select: 'name' }], function(err, user) {
       if (err) return res.send(err);
       res.json({ success: true, data: { user: user } });
     });  

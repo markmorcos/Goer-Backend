@@ -4,8 +4,8 @@ var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 
 var Static = new Schema({
-  title: String,
   slug: String,
+  title: String,
   text: String
 });
 

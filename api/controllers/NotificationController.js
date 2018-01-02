@@ -3,7 +3,7 @@
 var mongoose = require('mongoose');
 var Notification = mongoose.model('Notification');
 var moment = require('moment');
-var i18n = require('../util/i18n')
+var i18n = require('../../util/i18n')
 
 /**
  * @api {get} /api/notifications Read all notifications

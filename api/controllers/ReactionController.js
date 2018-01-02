@@ -4,7 +4,7 @@ var mongoose = require('mongoose');
 var Reaction = mongoose.model('Reaction');
 
 /**
- * @api {post} /api/reaction Create new reaction
+ * @api {post} /api/reactions Create new reaction
  * @apiName CreateReaction
  * @apiGroup Reaction
  *
@@ -43,7 +43,7 @@ exports.create = function(req, res) {
 };
 
 /**
- * @api {put} /api/reaction Update existing reaction
+ * @api {put} /api/reactions Update existing reaction
  * @apiName UpdateReaction
  * @apiGroup Reaction
  *
@@ -81,7 +81,7 @@ exports.update = function(req, res) {
 };
 
 /**
- * @api {delete} /api/reaction Delete existing reaction
+ * @api {delete} /api/reactions Delete existing reaction
  * @apiName DeleteReaction
  * @apiGroup Reaction
  *

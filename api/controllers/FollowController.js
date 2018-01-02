@@ -5,7 +5,7 @@ var Follow = mongoose.model('Follow');
 var Notification = mongoose.model('Notification');
 var Session = mongoose.model('Session');
 var admin = require('firebase-admin');
-var i18n = require('../util/i18n')
+var i18n = require('../../util/i18n')
 
 /**
  * @api {get} /api/follows Read all follows

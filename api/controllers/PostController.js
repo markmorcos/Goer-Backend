@@ -7,8 +7,8 @@ var Follow = mongoose.model('Follow');
 var multer  = require('multer');
 var moment = require('moment');
 
-var fs = require('../util/fs');
-var constants = require('../util/constants');
+var fs = require('../../util/fs');
+var constants = require('../../util/constants');
 
 function populatePosts(query, userId, page = 1) {
   return Post
@@ -205,7 +205,7 @@ function populatePost(req, res, next) {
 }
 
 /**
- * @api {post} /api/post Create new post
+ * @api {post} /api/posts Create new post
  * @apiName CreatePost
  * @apiGroup Post
  * @apiParam {String} token Authentication token
@@ -295,7 +295,7 @@ exports.validateExistingPost = function(req, res, next) {
 }
 
 /**
- * @api {put} /api/post Update existing post
+ * @api {put} /api/posts Update existing post
  * @apiName UpdatePost
  * @apiGroup Post
  *
@@ -350,7 +350,7 @@ exports.update = function(req, res) {
 };
 
 /**
- * @api {delete} /api/post Delete existing post
+ * @api {delete} /api/posts Delete existing post
  * @apiName DeletePost
  * @apiGroup Post
  *

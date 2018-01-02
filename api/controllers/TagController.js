@@ -9,7 +9,7 @@ var Tag = mongoose.model('Tag');
  * @apiGroup Tag
  *
  * @apiSuccess {Boolean} success true
- * @apiSuccess {Array} tags List of tags
+ * @apiSuccess {Array} data List of tags
  *
  * @apiError {Boolean} success false
  * @apiError {String} message Error message
@@ -17,7 +17,7 @@ var Tag = mongoose.model('Tag');
 exports.list = function(req, res) {
   Tag.find({}).sort('name').exec(function(err, tags) {
     if (err) return res.send(err);
-    res.json({ success: true, data: { tags: tags } });
+    res.json({ success: true, data: tags });
   });
 };
 
@@ -30,20 +30,48 @@ exports.list = function(req, res) {
  * @apiParam {String} name Tag name
  *
  * @apiSuccess {Boolean} success true
- * @apiSuccess {Object} tag Tag created
+ * @apiSuccess {Object} data Tag created
  *
  * @apiError {Boolean} success false
  * @apiError {String} message Error message
  */
 exports.create = function(req, res) {
   if (req.decoded.role !== 'admin') {
-    return res.json({ success: false, message: 'You are not allowed to create tags' });
+    return res.status(403).json({ success: false, message: 'You are not allowed to create tags' });
   }
-  if (!req.body.name) return res.json({ success: false, message: 'Name is required' });
+  if (!req.body.name) return res.status(400).json({ success: false, message: 'Name is required' });
   var tag = new Tag({ name: req.body.name });
   tag.save(function(err, tag) {
     if (err) return res.send(err);
-    res.json({ success: true, data: { tag: tag } });
+    res.json({ success: true, data: tag });
+  });
+};
+
+/**
+ * @api {get} /api/tags Read single tag
+ * @apiName ReadTag
+ * @apiGroup Tag
+ *
+ * @apiParam {String} id Tag ID
+ *
+ * @apiSuccess {Boolean} success true
+ * @apiSuccess {Array} data List of tags
+ *
+ * @apiError {Boolean} success false
+ * @apiError {String} message Error message
+ */
+exports.read = function(req, res) {
+  if (req.decoded.role !== 'admin') {
+    return res.status(403).json({ success: false, message: 'You are not allowed to read tags' });
+  }
+  if (!req.params.id) return res.status(400).json({ success: false, message: 'ID is required' });
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return res.status(404).json({ success: false, message: 'Tag not found' });
+  }
+  Tag.findById(req.params.id, function(err, tag) {
+    if (err) return res.send(err);
+    if (!tag) return res.status(404).json({ success: false, message: 'Tag not found' });
+    res.json({ success: true, data: tag });
   });
 };
 
@@ -56,22 +84,25 @@ exports.create = function(req, res) {
  * @apiParam {String} name Tag name (Optional)
  *
  * @apiSuccess {Boolean} success true
- * @apiSuccess {Object} tag Tag updated
+ * @apiSuccess {Object} data Tag updated
  *
  * @apiError {Boolean} success false
  * @apiError {String} message Error message
  */
 exports.update = function(req, res) {
   if (req.decoded.role !== 'admin') {
-    return res.json({ success: false, message: 'You are not allowed to update this tag' });
+    return res.status(403).json({ success: false, message: 'You are not allowed to update this tag' });
   }
-  if (!req.body.id) return res.json({ success: false, message: 'ID is required' });
-  Tag.findById(req.body.id, function(err, tag) {
-    if (!tag) return res.json({ success: false, message: 'Tag not found' });
+  if (!req.params.id) return res.status(400).json({ success: false, message: 'ID is required' });
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return res.status(404).json({ success: false, message: 'Tag not found' });
+  }
+  Tag.findById(req.params.id, function(err, tag) {
+    if (!tag) return res.status(404).json({ success: false, message: 'Tag not found' });
     tag.name = req.body.name || tag.name;
     tag.save(function(err, tag) {
       if (err) return res.send(err);
-      res.json({ success: true, data: { tag: tag } });
+      res.json({ success: true, data: tag });
     });
   });
 };
@@ -91,12 +122,15 @@ exports.update = function(req, res) {
  */
 exports.delete = function(req, res) {
   if (req.decoded.role !== 'admin') {
-    return res.json({ success: false, message: 'You are not allowed to delete this tag' });
+    return res.stats(403).json({ success: false, message: 'You are not allowed to delete this tag' });
   }
-  if (!req.body.id) return res.json({ success: false, message: 'ID is required' });
-  Tag.findByIdAndRemove(req.body.id, function(err, tag) {
+  if (!req.params.id) return res.status(400).json({ success: false, message: 'ID is required' });
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return res.status(404).json({ success: false, message: 'Tag not found' });
+  }
+  Tag.findByIdAndRemove(req.params.id, function(err, tag) {
     if (err) return res.send(err);
-    if (!tag) return res.json({ success: false, message: 'Tag not found' });
+    if (!tag) return res.status(404).json({ success: false, message: 'Tag not found' });
     res.json({ success: true });
   });
 };

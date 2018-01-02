@@ -4,7 +4,7 @@ var mongoose = require('mongoose');
 var Comment = mongoose.model('Comment');
 
 /**
- * @api {post} /api/comment Create new comment
+ * @api {post} /api/comments Create new comment
  * @apiName CreateComment
  * @apiGroup Comment
  *
@@ -44,7 +44,7 @@ exports.create = function(req, res) {
 };
 
 /**
- * @api {put} /api/comment Update existing comment
+ * @api {put} /api/comments Update existing comment
  * @apiName UpdateComment
  * @apiGroup Comment
  *
@@ -97,7 +97,7 @@ exports.update = function(req, res) {
 };
 
 /**
- * @api {delete} /api/comment Delete existing comment
+ * @api {delete} /api/comments Delete existing comment
  * @apiName DeleteComment
  * @apiGroup Comment
  *

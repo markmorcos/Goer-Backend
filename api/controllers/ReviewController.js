@@ -34,7 +34,7 @@ exports.list = function(req, res) {
 };
 
 /**
- * @api {post} /api/review Create new review
+ * @api {post} /api/reviews Create new review
  * @apiName CreateReview
  * @apiGroup Review
  *
@@ -44,6 +44,7 @@ exports.list = function(req, res) {
  * @apiParam {String} text Review text (optional)
  *
  * @apiSuccess {Boolean} success true
+ * @apiSuccess {Number} rating Business average rating
  *
  * @apiError {Boolean} success false
  * @apiError {String} message Error message
@@ -59,21 +60,24 @@ exports.create = function(req, res) {
     if (!user || user.role !== 'business') return res.json({ success: false, message: 'Business not found' });
     Review.findOne({ user: req.decoded._id, business: req.body.id, text: { $eq: null } }, function(err, review) {
       if (err) return res.send(err);
-      if (review && !req.body.text) return res.json({ success: false, message: 'You already rated this business' });
-      Review.create({
-        user: req.decoded._id,
-        business: req.body.id,
-        rating: req.body.rating,
-        text: req.body.text || undefined
-      }, function(err, review) {
+      if (review && !req.body.text) {
+        review.rating = req.body.rating;
+      } else {
+        review = new Review({
+          user: req.decoded._id,
+          business: req.body.id,
+          rating: req.body.rating,
+          text: req.body.text
+        })
+      }
+      review.save(function(err, review) {
         if (err) return res.send(err);
         Review.aggregate([
           { $match: { business: mongoose.Types.ObjectId(req.body.id) } },
           { $group: { _id: '$business', rating: { $avg: '$rating' } } }
         ], function(err, reviews) {
-          console.log(reviews);
           reviews.push({ rating: 0 });
-          res.json({ success: true, data: { review: reviews.shift().rating || 0 } });
+          res.json({ success: true, data: { rating: Math.round(reviews.shift().rating * 100) / 100 || 0 } });
         });
       });
     });
@@ -81,7 +85,7 @@ exports.create = function(req, res) {
 };
 
 /**
- * @api {put} /api/review Update existing review
+ * @api {put} /api/reviews Update existing review
  * @apiName UpdateReview
  * @apiGroup Review
  *
@@ -91,7 +95,7 @@ exports.create = function(req, res) {
  * @apiParam {String} text Review text (optional)
  *
  * @apiSuccess {Boolean} success true
- * @apiSuccess {Object} review Review updated
+ * @apiSuccess {Object} rating Business average rating
  *
  * @apiError {Boolean} success false
  * @apiError {String} message Error message
@@ -116,9 +120,8 @@ exports.update = function(req, res) {
           { $match: { business: review.business } },
           { $group: { _id: '$business', rating: { $avg: '$rating' } } }
         ], function(err, reviews) {
-          console.log(reviews);
           reviews.push({ rating: 0 });
-          res.json({ success: true, data: { review: Math.round(reviews.shift().rating * 100) / 100 || 0 } });
+          res.json({ success: true, data: { rating: Math.round(reviews.shift().rating * 100) / 100 || 0 } });
         });
       });
     });
@@ -126,7 +129,7 @@ exports.update = function(req, res) {
 };
 
 /**
- * @api {delete} /api/review Delete existing review
+ * @api {delete} /api/reviews Delete existing review
  * @apiName DeleteReview
  * @apiGroup Review
  *
