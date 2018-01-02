@@ -4,7 +4,7 @@ var mongoose = require('mongoose');
 var Static = mongoose.model('Static');
 
 /**
- * @api {get} /api/statics Read all statics
+ * @api {get} /api/list-statics Read all statics
  * @apiName ReadStatics
  * @apiGroup Static
  *
@@ -14,19 +14,40 @@ var Static = mongoose.model('Static');
  * @apiError {Boolean} success false
  * @apiError {String} message Error message
  */
-exports.list = function(req, res) {
+exports.listStatics = function(req, res) {
   Static.find({}).exec(function(err, statics) {
     if (err) return res.send(err);
-    // statics = statics.reduce(function(a, b){
-    //   a[b.slug] = { title: b.title, text: b.text };
-    //   return a;
-    // }, {});    
+    statics = statics.reduce(function(a, b){
+      a[b.slug] = { title: b.title, text: b.text };
+      return a;
+    }, {});    
+    res.json({ success: true, data: { statics: statics } });
+  });
+};
+
+/**
+ * @api {get} /api/statics List (Admin only)
+ * @apiName ListStatics
+ * @apiGroup Static
+ *
+ * @apiSuccess {Boolean} success true
+ * @apiSuccess {Array} statics List of statics
+ *
+ * @apiError {Boolean} success false
+ * @apiError {String} message Error message
+ */
+exports.list = function(req, res) {
+  if (req.decoded.role !== 'admin') {
+    return res.status(403).json({ success: false, message: 'You are not allowed to list statics' });
+  }
+  Static.find({}).exec(function(err, statics) {
+    if (err) return res.send(err);
     res.json({ success: true, data: statics });
   });
 };
 
 /**
- * @api {post} /api/static Create new static (Admin only)
+ * @api {post} /api/static Create (Admin only)
  * @apiName CreateStatic
  * @apiGroup Static
  *
@@ -55,7 +76,7 @@ exports.create = function(req, res) {
 };
 
 /**
- * @api {get} /api/statics Read single static
+ * @api {get} /api/statics Read (Admin only)
  * @apiName ReadStatic
  * @apiGroup Static
  *
@@ -83,7 +104,7 @@ exports.read = function(req, res) {
 };
 
 /**
- * @api {put} /api/static Update existing static (Admin only)
+ * @api {put} /api/static Update (Admin only)
  * @apiName UpdateStatic
  * @apiGroup Static
  *
@@ -117,7 +138,7 @@ exports.update = function(req, res) {
 };
 
 /**
- * @api {delete} /api/static Delete existing static (Admin only)
+ * @api {delete} /api/static Delete (Admin only)
  * @apiName DeleteStatic
  * @apiGroup Static
  *

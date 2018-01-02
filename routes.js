@@ -75,7 +75,7 @@ module.exports = function(app) {
 	app.delete('/api/saves', verifyToken, saves.delete);
 
 	// Tag
-	app.get('/api/list-tags', tags.list);
+	app.get('/api/list-tags', tags.listTags);
 
 	// Follow
 	app.get('/api/follows', verifyToken, follows.list);
@@ -112,7 +112,7 @@ module.exports = function(app) {
 	app.get('/api/notifications', verifyToken, notifications.list);
 
 	// Static
-	app.get('/api/statics', verifyToken, statics.list);
+	app.get('/api/list-statics', verifyToken, statics.listStatics);
 
 	/* ----- */
 	/* ADMIN */

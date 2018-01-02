@@ -4,7 +4,7 @@ var mongoose = require('mongoose');
 var Tag = mongoose.model('Tag');
 
 /**
- * @api {get} /api/tags Read all tags
+ * @api {get} /api/list-tags Read all tags
  * @apiName ReadTags
  * @apiGroup Tag
  *
@@ -14,7 +14,7 @@ var Tag = mongoose.model('Tag');
  * @apiError {Boolean} success false
  * @apiError {String} message Error message
  */
-exports.list = function(req, res) {
+exports.listTags = function(req, res) {
   Tag.find({}).sort('name').exec(function(err, tags) {
     if (err) return res.send(err);
     res.json({ success: true, data: tags });
@@ -22,7 +22,28 @@ exports.list = function(req, res) {
 };
 
 /**
- * @api {post} /api/tag Create new tag (Admin only)
+ * @api {get} /api/tags List (Admin only)
+ * @apiName ListTags
+ * @apiGroup Tag
+ *
+ * @apiSuccess {Boolean} success true
+ * @apiSuccess {Array} data List of tags
+ *
+ * @apiError {Boolean} success false
+ * @apiError {String} message Error message
+ */
+exports.list = function(req, res) {
+  if (req.decoded.role !== 'admin') {
+    return res.status(403).json({ success: false, message: 'You are not allowed to create tags' });
+  }
+  Tag.find({}).sort('name').exec(function(err, tags) {
+    if (err) return res.send(err);
+    res.json({ success: true, data: tags });
+  });
+};
+
+/**
+ * @api {post} /api/tag Create (Admin only)
  * @apiName CreateTag
  * @apiGroup Tag
  *
@@ -37,7 +58,7 @@ exports.list = function(req, res) {
  */
 exports.create = function(req, res) {
   if (req.decoded.role !== 'admin') {
-    return res.status(403).json({ success: false, message: 'You are not allowed to create tags' });
+    return res.status(403).json({ success: false, message: 'You are not allowed to list tags' });
   }
   if (!req.body.name) return res.status(400).json({ success: false, message: 'Name is required' });
   var tag = new Tag({ name: req.body.name });
@@ -48,7 +69,7 @@ exports.create = function(req, res) {
 };
 
 /**
- * @api {get} /api/tags Read single tag
+ * @api {get} /api/tags Read (Admin only)
  * @apiName ReadTag
  * @apiGroup Tag
  *
@@ -76,7 +97,7 @@ exports.read = function(req, res) {
 };
 
 /**
- * @api {put} /api/tag Update existing tag (Admin only)
+ * @api {put} /api/tag Update (Admin only)
  * @apiName UpdateTag
  * @apiGroup Tag
  *
@@ -108,7 +129,7 @@ exports.update = function(req, res) {
 };
 
 /**
- * @api {delete} /api/tag Delete existing tag (Admin only)
+ * @api {delete} /api/tag Delete (Admin only)
  * @apiName DeleteTag
  * @apiGroup Tag
  *
