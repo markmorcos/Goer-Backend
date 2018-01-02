@@ -112,7 +112,7 @@ module.exports = function(app) {
 	app.get('/api/notifications', verifyToken, notifications.list);
 
 	// Static
-	app.get('/api/list-statics', verifyToken, statics.listStatics);
+	app.get('/api/list-statics', statics.listStatics);
 
 	/* ----- */
 	/* ADMIN */
