@@ -25,17 +25,6 @@ exports.listStatics = function(req, res) {
   });
 };
 
-/**
- * @api {get} /api/statics List (Admin only)
- * @apiName ListStatics
- * @apiGroup Static
- *
- * @apiSuccess {Boolean} success true
- * @apiSuccess {Array} statics List of statics
- *
- * @apiError {Boolean} success false
- * @apiError {String} message Error message
- */
 exports.list = function(req, res) {
   if (req.decoded.role !== 'admin') {
     return res.status(403).json({ success: false, message: 'You are not allowed to list statics' });
@@ -46,21 +35,6 @@ exports.list = function(req, res) {
   });
 };
 
-/**
- * @api {post} /api/static Create (Admin only)
- * @apiName CreateStatic
- * @apiGroup Static
- *
- * @apiParam {String} token Authentication token
- * @apiParam {String} slug Static slug
- * @apiParam {String} title Static title
- *
- * @apiSuccess {Boolean} success true
- * @apiSuccess {Object} data Static created
- *
- * @apiError {Boolean} success false
- * @apiError {String} message Error message
- */
 exports.create = function(req, res) {
   if (req.decoded.role !== 'admin') {
     return res.status(403).json({ success: false, message: 'You are not allowed to create statics' });
@@ -75,19 +49,6 @@ exports.create = function(req, res) {
   });
 };
 
-/**
- * @api {get} /api/statics Read (Admin only)
- * @apiName ReadStatic
- * @apiGroup Static
- *
- * @apiParam {String} id Static ID
- *
- * @apiSuccess {Boolean} success true
- * @apiSuccess {Array} data List of statics
- *
- * @apiError {Boolean} success false
- * @apiError {String} message Error message
- */
 exports.read = function(req, res) {
   if (req.decoded.role !== 'admin') {
     return res.status(403).json({ success: false, message: 'You are not allowed to read statics' });
@@ -103,20 +64,6 @@ exports.read = function(req, res) {
   });
 };
 
-/**
- * @api {put} /api/static Update (Admin only)
- * @apiName UpdateStatic
- * @apiGroup Static
- *
- * @apiParam {String} token Authentication token
- * @apiParam {String} title Static title (Optional)
- *
- * @apiSuccess {Boolean} success true
- * @apiSuccess {Object} data Static updated
- *
- * @apiError {Boolean} success false
- * @apiError {String} message Error message
- */
 exports.update = function(req, res) {
   if (req.decoded.role !== 'admin') {
     return res.status(403).json({ success: false, message: 'You are not allowed to update this static' });
@@ -137,19 +84,6 @@ exports.update = function(req, res) {
   });
 };
 
-/**
- * @api {delete} /api/static Delete (Admin only)
- * @apiName DeleteStatic
- * @apiGroup Static
- *
- * @apiParam {String} token Authentication token
- * @apiParam {String} id Static ID
- *
- * @apiSuccess {Boolean} success true
- *
- * @apiError {Boolean} success false
- * @apiError {String} message Error message
- */
 exports.delete = function(req, res) {
   if (req.decoded.role !== 'admin') {
     return res.stats(403).json({ success: false, message: 'You are not allowed to delete this static' });
