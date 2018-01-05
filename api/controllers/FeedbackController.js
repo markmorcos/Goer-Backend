@@ -41,7 +41,7 @@ exports.create = function(req, res) {
   }
   if (!req.body.user) return res.status(400).json({ success: false, message: 'User is required' });
   if (!req.body.text) return res.status(400).json({ success: false, message: 'Text is required' });
-  var feedback = new Feedback({ user: req.body.id, text: req.body.text });
+  var feedback = new Feedback({ user: req.body.user, text: req.body.text });
   feedback.save(function(err, feedback) {
     if (err) return res.send(err);
     res.json({ success: true, data: feedback });
