@@ -132,6 +132,7 @@ exports.feed = function(req, res) {
  * @api {get} /api/posts Read posts of a specific user
  * @apiName ReadPosts
  * @apiGroup Post
+ *
  * @apiParam {String} token Authentication token
  * @apiParam {String} id User ID
  * @apiParam {String} page Page (optional, default: 1)
@@ -208,6 +209,7 @@ function populatePost(req, res, next) {
  * @api {post} /api/posts Create new post
  * @apiName CreatePost
  * @apiGroup Post
+ *
  * @apiParam {String} token Authentication token
  * @apiParam {String} business Business ID
  * @apiParam {String} title Place name in case business ID is empty
@@ -242,6 +244,7 @@ exports.create = function(req, res) {
 /**
  * @api {get} /api/post Read post
  * @apiName ReadPost
+ *
  * @apiGroup Post
  *
  * @apiParam {String} token Authentication token

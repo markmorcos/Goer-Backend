@@ -13,6 +13,7 @@ var Review = require('./models/Review');
 var Comment = require('./models/Comment');
 var Notification = require('./models/Notification');
 var Static = require('./models/Static');
+var Feedback = require('./models/Feedback');
 
 var sessions = require('./api/controllers/SessionController');
 var users = require('./api/controllers/UserController');
@@ -25,6 +26,7 @@ var reviews = require('./api/controllers/ReviewController');
 var comments = require('./api/controllers/CommentController');
 var notifications = require('./api/controllers/NotificationController');
 var statics = require('./api/controllers/StaticController');
+var feedbacks = require('./api/controllers/FeedbackController');
 
 function verifyToken(req, res, next) {
   var token = req.body.token || req.query.token || req.params.token || req.headers['x-access-token'];
@@ -114,6 +116,9 @@ module.exports = function(app) {
 	// Static
 	app.get('/api/list-statics', statics.listStatics);
 
+	// Feedback
+	app.post('/api/send-feedback', feedbacks.sendFeedback);
+
 	/* ----- */
 	/* ADMIN */
 	/* ----- */
@@ -131,4 +136,11 @@ module.exports = function(app) {
 	app.get('/api/statics/:id', verifyToken, statics.read);
 	app.put('/api/statics/:id', verifyToken, statics.update);
 	app.delete('/api/statics/:id', verifyToken, statics.delete);
+
+	// Feedback
+	app.get('/api/feedbacks', verifyToken, feedbacks.list);
+	app.post('/api/feedbacks', verifyToken, feedbacks.create);
+	app.get('/api/feedbacks/:id', verifyToken, feedbacks.read);
+	app.put('/api/feedbacks/:id', verifyToken, feedbacks.update);
+	app.delete('/api/feedbacks/:id', verifyToken, feedbacks.delete);
 }

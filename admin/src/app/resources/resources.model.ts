@@ -23,3 +23,16 @@ export const statics = [
     placeholder: 'Text'
   }
 ];
+
+export const feedbacks = [
+  {
+    type: 'text',
+    name: 'user',
+    placeholder: 'User'
+  },
+  {
+    type: 'text',
+    name: 'text',
+    placeholder: 'Text'
+  }
+];

@@ -40,6 +40,7 @@ export class ListResourcesComponent implements OnInit {
     this.route.params.subscribe(params => {
       this.model = params.model;
       this.fields = fields[params.model];
+      this.resources = [];
       this.listResources();
     });
   }

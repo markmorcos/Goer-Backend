@@ -29,7 +29,7 @@ exports.list = function(req, res) {
   if (req.decoded.role !== 'admin') {
     return res.status(403).json({ success: false, message: 'You are not allowed to list statics' });
   }
-  Static.find({}).exec(function(err, statics) {
+  Static.find({}).sort('title').exec(function(err, statics) {
     if (err) return res.send(err);
     res.json({ success: true, data: statics });
   });
