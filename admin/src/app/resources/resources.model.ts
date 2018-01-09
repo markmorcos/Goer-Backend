@@ -1,3 +1,32 @@
+export const admins = [
+  {
+    type: 'nested',
+    name: 'name',
+    fields: [
+      {
+        type: 'text',
+        name: 'first',
+        placeholder: 'First Name'
+      },
+      {
+        type: 'text',
+        name: 'last',
+        placeholder: 'Last Name'
+      }
+    ]
+  },
+  {
+    type: 'email',
+    name: 'email',
+    placeholder: 'Email'
+  },
+  {
+    type: 'password',
+    name: 'password',
+    placeholder: 'Password'
+  }
+];
+
 export const tags = [
   {
     type: 'text',
@@ -18,7 +47,7 @@ export const statics = [
     placeholder: 'Title'
   },
   {
-    type: 'text',
+    type: 'textarea',
     name: 'text',
     placeholder: 'Text'
   }

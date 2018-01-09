@@ -14,6 +14,8 @@ var Comment = require('./models/Comment');
 var Notification = require('./models/Notification');
 var Static = require('./models/Static');
 var Feedback = require('./models/Feedback');
+var Thread = require('./models/Thread');
+var Message = require('./models/Message');
 
 var sessions = require('./api/controllers/SessionController');
 var users = require('./api/controllers/UserController');
@@ -27,6 +29,8 @@ var comments = require('./api/controllers/CommentController');
 var notifications = require('./api/controllers/NotificationController');
 var statics = require('./api/controllers/StaticController');
 var feedbacks = require('./api/controllers/FeedbackController');
+var threads = require('./api/controllers/ThreadController');
+var messages = require('./api/controllers/MessageController');
 
 function verifyToken(req, res, next) {
   var token = req.body.token || req.query.token || req.params.token || req.headers['x-access-token'];
@@ -67,8 +71,8 @@ module.exports = function(app) {
 	app.post('/api/contact-business', verifyToken, users.contactBusiness);
 	app.post('/api/reset-password', users.resetPassword);
 	app.get('/api/search', users.search);
-	app.get('/api/read-profile', verifyToken, users.read);
-	app.put('/api/update-profile', upload.single('picture'), verifyToken, users.validateExistingUser, users.update);
+	app.get('/api/read-profile', verifyToken, users.readProfile);
+	app.put('/api/update-profile', upload.single('picture'), verifyToken, users.validateExistingUser, users.updateProfile);
 	app.put('/api/change-password', verifyToken, users.changePassword);
 
 	// Save
@@ -119,28 +123,31 @@ module.exports = function(app) {
 	// Feedback
 	app.post('/api/send-feedback', feedbacks.sendFeedback);
 
+	// Thread
+	app.post('/api/threads', verifyToken, threads.create);
+	app.get('/api/threads', verifyToken, threads.list);
+	app.put('/api/threads', verifyToken, threads.update);
+	app.delete('/api/threads', verifyToken, threads.delete);
+
+	// Message
+	app.post('/api/messages', verifyToken, messages.create);
+	app.get('/api/messages', verifyToken, messages.list);
+
 	/* ----- */
 	/* ADMIN */
 	/* ----- */
 
-	// Tag
-	app.get('/api/tags', verifyToken, tags.list);
-	app.post('/api/tags', verifyToken, tags.create);
-	app.get('/api/tags/:id', verifyToken, tags.read);
-	app.put('/api/tags/:id', verifyToken, tags.update);
-	app.delete('/api/tags/:id', verifyToken, tags.delete);
-
-	// Static
-	app.get('/api/statics', verifyToken, statics.list);
-	app.post('/api/statics', verifyToken, statics.create);
-	app.get('/api/statics/:id', verifyToken, statics.read);
-	app.put('/api/statics/:id', verifyToken, statics.update);
-	app.delete('/api/statics/:id', verifyToken, statics.delete);
-
-	// Feedback
-	app.get('/api/feedbacks', verifyToken, feedbacks.list);
-	app.post('/api/feedbacks', verifyToken, feedbacks.create);
-	app.get('/api/feedbacks/:id', verifyToken, feedbacks.read);
-	app.put('/api/feedbacks/:id', verifyToken, feedbacks.update);
-	app.delete('/api/feedbacks/:id', verifyToken, feedbacks.delete);
+	const resources = [
+		{ name: 'admins', controller: users },
+		{ name: 'tags', controller: tags },
+		{ name: 'statics', controller: statics },
+		{ name: 'feedbacks', controller: feedbacks }
+	];
+	resources.forEach(function(resource) {
+		app.get(`/api/${resource.name}`, verifyToken, resource.controller.list);
+		app.post(`/api/${resource.name}`, verifyToken, resource.controller.create);
+		app.get(`/api/${resource.name}/:id`, verifyToken, resource.controller.read);
+		app.put(`/api/${resource.name}/:id`, verifyToken, resource.controller.update);
+		app.delete(`/api/${resource.name}/:id`, verifyToken, resource.controller.delete);
+	});
 }

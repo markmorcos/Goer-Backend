@@ -2,10 +2,8 @@
 
 var mongoose = require('mongoose');
 var Follow = mongoose.model('Follow');
-var Notification = mongoose.model('Notification');
 var Session = mongoose.model('Session');
-var admin = require('firebase-admin');
-var i18n = require('../../util/i18n')
+var notifications = require('../../util/notifications');
 
 /**
  * @api {get} /api/follows Read all follows
@@ -68,38 +66,7 @@ exports.follow = function(req, res) {
     var newFollow = new Follow({ follower: req.decoded._id, followee: req.body.id });
     newFollow.save(function(err, follow) {
       if (err) return res.send(err);
-      Notification.create({
-        type: 'request',
-        sender: req.decoded._id,
-        receiver: req.body.id
-      }, function(err, notification) {
-        if (err) return res.send(err);
-        res.json({ success: true });
-        Session
-        .find({ user: req.body.id })
-        .populate('user')
-        .exec(function(err, sessions) {
-          if (err) return res.send(err);
-          sessions.forEach(function(session) {
-            const user = session.user;
-            const fullName = user.name.first + ' ' + user.name.last;
-            var payload = {
-              notification: {
-                title: i18n[user.language]['accept'].title(user).replace(`[[${user._id}]]`, fullName),
-                body: i18n[user.language]['accept'].body(user).replace(`[[${user._id}]]`, fullName)
-              }
-            };
-            admin.messaging().sendToDevice(session.registrationToken, payload)
-            .then(function(response) {
-              console.log('Successfully sent message:', response);
-              if (response.failureCount) session.remove();
-            })
-            .catch(function(error) {
-              console.log('Error sending message:', error);
-            });
-          });
-        });
-      })  
+      notifications.notify('request', req.decoded._id, req.body.id, res);
     });
   });
 };
@@ -130,38 +97,7 @@ exports.accept = function(req, res) {
     follow.status = 'accepted';
     follow.save(function(err, follow) {
       if (err) return res.send(err);
-      Notification.create({
-        type: 'accept',
-        sender: req.decoded._id,
-        receiver: req.body.id
-      }, function(err, notification) {
-        if (err) return res.send(err);
-        res.json({ success: true });
-        Session
-        .find({ user: req.body.id })
-        .populate('user')
-        .exec(function(err, sessions) {
-          if (err) return res.send(err);
-          sessions.forEach(function(session) {
-            const user = session.user;
-            const fullName = user.name.first + ' ' + user.name.last;
-            var payload = {
-              notification: {
-                title: i18n[user.language]['accept'].title(user).replace(`[[${user._id}]]`, fullName),
-                body: i18n[user.language]['accept'].body(user).replace(`[[${user._id}]]`, fullName)
-              }
-            };
-            admin.messaging().sendToDevice(session.registrationToken, payload)
-            .then(function(response) {
-              console.log('Successfully sent message:', response);
-              if (response.failureCount) session.remove();
-            })
-            .catch(function(error) {
-              console.log('Error sending message:', error);
-            });
-          });
-        });
-      })  
+      notifications.notify('accept', req.decoded._id, req.body.id, res);
     });
   });
 };

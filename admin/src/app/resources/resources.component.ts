@@ -15,8 +15,8 @@ export class ResourcesComponent implements OnInit {
 
   constructor(private route: ActivatedRoute) {
     this.route.params.subscribe(params => {
-      this.title = params.model.charAt(0).toUpperCase() + params.model.slice(1);
       this.model = params.model;
+      this.title = this.model.charAt(0).toUpperCase() + params.model.slice(1);
       this.fields = fields[params.model];
     });
   }

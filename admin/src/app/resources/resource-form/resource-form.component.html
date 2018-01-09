@@ -5,14 +5,62 @@
       <span *ngFor="let field of fields">
         <label [for]="field.name">{{ field.placeholder }}</label>
         <span [ngSwitch]="field.type">
+          <span *ngSwitchCase="'nested'">
+            <span *ngFor="let nestedField of field.nested">
+              <span [ngSwitch]="nestedField.type">
+                <input *ngSwitchCase="'text'"
+                  type="text"
+                  class="form-control"
+                  [id]="nestedField.name"
+                  [name]="nestedField.name"
+                  [placeholder]="nestedField.placeholder"
+                  [formControlName]="nestedField.name"
+                />
+              </span>
+            </span>
+          </span>
           <input *ngSwitchCase="'text'"
+            type="text"
+            class="form-control"
             [id]="field.name"
             [name]="field.name"
-            [type]="field.type"
+            [placeholder]="field.placeholder"
+            [formControlName]="field.name"
+          />
+          <input *ngSwitchCase="'email'"
+            type="email"
+            class="form-control"
+            [id]="field.name"
+            [name]="field.name"
+            [placeholder]="field.placeholder"
+            [formControlName]="field.name"
+          />
+          <input *ngSwitchCase="'password'"
+            type="password"
+            class="form-control"
+            [id]="field.name"
+            [name]="field.name"
+            [placeholder]="field.placeholder"
+            [formControlName]="field.name"
+          />
+          <textarea *ngSwitchCase="'textarea'"
+            [id]="field.name"
+            [name]="field.name"
             [placeholder]="field.placeholder"
             [formControlName]="field.name"
             class="form-control"
-          />
+          >
+          </textarea>
+          <select *ngSwitchCase="'select'"
+            [id]="field.name"
+            [name]="field.name"
+            class="form-control"
+          >
+            <option>(Choose {{ field.placeholder }})</option>
+            <option *ngFor="let option of field.options" [value]="option.key">
+              {{ option.value }}
+            </option>
+          </select>
         </span>
       </span>
     </div>

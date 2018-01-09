@@ -20,7 +20,13 @@ var Reaction = mongoose.model('Reaction');
  */
 exports.create = function(req, res) {
   if (!req.body.type) return res.json({ success: false, message: 'Type is required' });
+  if (req.body.type !== 'like' && req.body.type !== 'dislike') {
+    return res.json({ success: false, message: 'Type must be either like or dislike' });
+  }
   if (!req.body.model) return res.json({ success: false, message: 'Model is required' });
+  if (req.body.model !== 'Post' && req.body.model !== 'Review') {
+    return res.json({ success: false, message: 'Model must be either Post or Review' });
+  }
   if (!req.body.id) return res.json({ success: false, message: 'ID is required' });
   Reaction.findOne({
     user: req.decoded._id,
@@ -62,6 +68,13 @@ exports.update = function(req, res) {
     return res.json({ success: false, message: 'You are not allowed to create reactions' });
   }
   if (!req.body.type) return res.json({ success: false, message: 'Type is required' });
+  if (req.body.type !== 'like' && req.body.type !== 'dislike') {
+    return res.json({ success: false, message: 'Type must be either like or dislike' });
+  }
+  if (!req.body.model) return res.json({ success: false, message: 'Model is required' });
+  if (req.body.model !== 'Post' && req.body.model !== 'Review') {
+    return res.json({ success: false, message: 'Model must be either Post or Review' });
+  }
   if (!req.body.id) return res.json({ success: false, message: 'ID is required' });
   Reaction.findOne({
     user: req.decoded._id,

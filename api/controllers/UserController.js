@@ -413,7 +413,7 @@ function getPrivateUser(user) {
  * @apiError {Boolean} success false
  * @apiError {String} message Error message
  */
-exports.read = function(req, res) {
+exports.readProfile = function(req, res) {
   if (!req.query.id) return res.json({ success: false, message: 'ID is required' });
   User
   .findById(req.query.id)
@@ -470,7 +470,7 @@ exports.validateExistingUser = function(req, res, next) {
  * @apiError {Boolean} success false
  * @apiError {String} message Error message
  */
-exports.update = function(req, res) {
+exports.updateProfile = function(req, res) {
   const user = req.user;
   user.private = req.body.private || user.private;
   user.description = req.body.description || user.description;
@@ -511,5 +511,75 @@ exports.update = function(req, res) {
       if (err) return res.send(err);
       res.json({ success: true, data: { user: user } });
     });  
+  });
+};
+
+exports.list = function(req, res) {
+  if (req.decoded.role !== 'admin') {
+    return res.status(403).json({ success: false, message: 'You are not allowed to create admins' });
+  }
+  User.find({}, { password: false }).sort('fullName').exec(function(err, admins) {
+    if (err) return res.send(err);
+    res.json({ success: true, data: admins });
+  });
+};
+
+exports.create = function(req, res) {
+  if (req.decoded.role !== 'admin') {
+    return res.status(403).json({ success: false, message: 'You are not allowed to list admins' });
+  }
+  if (!req.body.name) return res.status(400).json({ success: false, message: 'Name is required' });
+  var admin = new Admin({ name: req.body.name });
+  admin.save(function(err, admin) {
+    if (err) return res.send(err);
+    res.json({ success: true, data: admin });
+  });
+};
+
+exports.read = function(req, res) {
+  if (req.decoded.role !== 'admin') {
+    return res.status(403).json({ success: false, message: 'You are not allowed to read admins' });
+  }
+  if (!req.params.id) return res.status(400).json({ success: false, message: 'ID is required' });
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return res.status(404).json({ success: false, message: 'Admin not found' });
+  }
+  User.findById(req.params.id, { password: false }, function(err, admin) {
+    if (err) return res.send(err);
+    if (!admin) return res.status(404).json({ success: false, message: 'Admin not found' });
+    res.json({ success: true, data: admin });
+  });
+};
+
+exports.update = function(req, res) {
+  if (req.decoded.role !== 'admin') {
+    return res.status(403).json({ success: false, message: 'You are not allowed to update this admin' });
+  }
+  if (!req.params.id) return res.status(400).json({ success: false, message: 'ID is required' });
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return res.status(404).json({ success: false, message: 'Admin not found' });
+  }
+  User.findById(req.params.id, function(err, admin) {
+    if (!admin) return res.status(404).json({ success: false, message: 'Admin not found' });
+    admin.name = req.body.name || admin.name;
+    admin.save(function(err, admin) {
+      if (err) return res.send(err);
+      res.json({ success: true, data: admin });
+    });
+  });
+};
+
+exports.delete = function(req, res) {
+  if (req.decoded.role !== 'admin' && req.decoded._id === req.params.id) {
+    return res.stats(403).json({ success: false, message: 'You are not allowed to delete this admin' });
+  }
+  if (!req.params.id) return res.status(400).json({ success: false, message: 'ID is required' });
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return res.status(404).json({ success: false, message: 'Admin not found' });
+  }
+  User.findByIdAndRemove(req.params.id, function(err, admin) {
+    if (err) return res.send(err);
+    if (!admin) return res.status(404).json({ success: false, message: 'Admin not found' });
+    res.json({ success: true });
   });
 };
