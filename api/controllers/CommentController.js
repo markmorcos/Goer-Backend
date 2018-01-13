@@ -2,6 +2,7 @@
 
 var mongoose = require('mongoose');
 var Comment = mongoose.model('Comment');
+var notifications = require('../../util/notifications');
 
 /**
  * @api {get} /api/comments Read all comments for a specific post or review
@@ -18,11 +19,11 @@ var Comment = mongoose.model('Comment');
  * @apiError {String} message Error message
  */
 exports.list = function(req, res) {
-  if (!req.query.model) return res.json({ success: false, message: 'Model is required' });
+  if (!req.query.model) return res.status(400).json({ success: false, message: 'Model is required' });
   if (req.query.model !== 'Post' && req.query.model !== 'Review') {
     return res.json({ success: false, mesage: 'Model must be either Post or Review' });
   }
-  if (!req.query.id) return res.json({ success: false, message: 'ID is required' });
+  if (!req.query.id) return res.status(400).json({ success: false, message: 'ID is required' });
   const Model = mongoose.model(req.query.model);
   Model
   .findOne({ _id: req.query.id })
@@ -30,7 +31,9 @@ exports.list = function(req, res) {
   .exec(function(err, model) {
     if (err) return res.send(err);
     if (!model) return res.json({ success: false, message: `${req.query.model} not found` });
-    if (model.user.private) return res.json({ success: false, message: 'You are not allowed to view these comments' });
+    if (model.user.private) {
+      return res.status(401).json({ success: false, message: 'You are not allowed to view these comments' });
+    }
     Comment
     .find({ 'item.model': req.query.model, 'item.document': req.query.id })
     .populate([
@@ -63,9 +66,9 @@ exports.list = function(req, res) {
  * @apiError {String} message Error message
  */
 exports.create = function(req, res) {
-  if (!req.body.type) return res.json({ success: false, message: 'Type is required' });
-  if (!req.body.id) return res.json({ success: false, message: 'ID is required' });
-  if (!req.body.text) return res.json({ success: false, message: 'Text is required' });
+  if (!req.body.type) return res.status(400).json({ success: false, message: 'Type is required' });
+  if (!req.body.id) return res.status(400).json({ success: false, message: 'ID is required' });
+  if (!req.body.text) return res.status(400).json({ success: false, message: 'Text is required' });
   Comment.create({
     user: req.decoded._id,
     item: { model: req.body.type, document: req.body.id },
@@ -79,8 +82,21 @@ exports.create = function(req, res) {
       { path: 'mentions', select: 'name picture' }
     ], function(err, comment) {
       if (err) return res.send(err);
-      // TODO: send push notification
-      res.json({ success: true, data: { comment: comment } });
+      comment.mentions.forEach(function(mention) {
+        notifications.notify(
+          'mention',
+          req.decoded._id,
+          mention,
+          'Comment',
+          comment._id,
+          res,
+          null,
+          function(err, notification) {
+            if (err) return res.send(err);
+            res.json({ success: true, data: { comment: comment } });
+          }
+        );
+      });
     });
   });
 };
@@ -102,26 +118,37 @@ exports.create = function(req, res) {
  * @apiError {String} message Error message
  */
 exports.update = function(req, res) {
-  if (!req.body.id) return res.json({ success: false, message: 'ID is required' });
+  if (!req.body.id) return res.status(400).json({ success: false, message: 'ID is required' });
   Comment.findById(req.body.id, function(err, comment) {
     if (err) return res.send(err);
     if (!comment) {
-      return res.json({ success: false, message: 'Comment does not exist' });
+      return res.status(404).json({ success: false, message: 'Comment not found' });
     }
     if (comment.user != String(req.decoded._id)) {
-      return res.json({ success: false, message: 'You are not allowed to edit this comment' });
+      return res.status(403).json({ success: false, message: 'You are not allowed to edit this comment' });
     }
     comment.text = req.body.text || comment.text;
     const mentions = req.body.mentions === undefined ? comment.mentions : req.body.mentions || [];
     mentions.forEach(function(mention) {
       if (comment.mentions.indexOf(mention) === -1) {
-        // TODO: add notification
-        // TODO: send push notification
+        notifications.notify(
+          'mention',
+          req.decoded._id,
+          mention,
+          'Comment',
+          comment._id,
+          res,
+          null,
+          function(err, notification) {
+            if (err) return res.send(err);
+            res.json({ success: true, data: { comment: comment } });
+          }
+        );
       }
     });
     comment.mentions.forEach(function(mention) {
       if (mentions.indexOf(mention) === -1) {
-        // TODO: remove notification
+        notifications.remove('Comment', comment._id, res, function(err, notification) {}, { receiver: mention });
       }
     });
     comment.mentions = mentions;
@@ -152,18 +179,18 @@ exports.update = function(req, res) {
  * @apiError {String} message Error message
  */
 exports.delete = function(req, res) {
-  if (!req.body.id) return res.json({ success: false, message: 'ID is required' });
+  if (!req.body.id) return res.status(400).json({ success: false, message: 'ID is required' });
   Comment.findById(req.body.id, function(err, comment) {
     if (err) return res.send(err);
     if (!comment) {
-      return res.json({ success: false, message: 'Comment does not exist' });
+      return res.status(404).json({ success: false, message: 'Comment not found' });
     }
     if (comment.user != String(req.decoded._id)) {
-      return res.json({ success: false, message: 'You are not allowed to delete this comment' });
+      return res.status(403).json({ success: false, message: 'You are not allowed to delete this comment' });
     }
     comment.remove(function(err, comment) {
       if (err) return res.send(err);
-      res.json({ success: true });
+      notifications.remove('Comment', comment._id, res);
     });
   });
 };

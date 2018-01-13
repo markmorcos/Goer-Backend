@@ -8,39 +8,84 @@ var admin = require('firebase-admin');
 
 var i18n = require('./i18n');
 
-exports.notify = function(type, sender, receiver, res) {
+exports.notify = function(type, sender, receiver, model, doc, res, options = { push: true }, callback = null) {
   Notification.create({
     type: type,
     sender: sender,
-    receiver: receiver
+    receiver: receiver,
+    item: { model: model, document: doc },
   }, function(err, notification) {
-    if (err) return res.send(err);
-    res.json({ success: true });
-    Session
-    .find({ user: receiver })
-    .populate('user')
-    .exec(function(err, sessions) {
+    if (callback) callback(err, notification);
+    else {
       if (err) return res.send(err);
-      sessions.forEach(function(session) {
-        if (session.registrationToken) {
-          const user = session.user;
-          const fullName = user.name.first + ' ' + user.name.last;
-          var payload = {
-            notification: {
-              title: i18n[user.language][type].title(user),
-              body: i18n[user.language][type].body(user)
-            }
-          };
-          admin.messaging().sendToDevice(session.registrationToken, payload)
-          .then(function(response) {
-            console.log('Successfully sent message:', response);
-            // if (response.failureCount) session.remove();
-          })
-          .catch(function(error) {
-            console.log('Error sending message:', error);
-          });
-        }
+      res.json({ success: true });
+    }
+    if (options.push) {
+      Session
+      .find({ user: receiver })
+      .populate({ path: 'user', select: 'name picture gender' })
+      .exec(function(err, sessions) {
+        if (err) return res.send(err);
+        sessions.forEach(function(session) {
+          if (session.registrationToken) {
+            options.user = session.user;
+            options.model = model;
+            var payload = {
+              notification: {
+                title: i18n[session.user.language][type].title,
+                body: i18n[session.user.language][type].message(options)
+              }
+            };
+            admin.messaging().sendToDevice(session.registrationToken, payload)
+            .then(function(response) {
+              console.log('Successfully sent message:', response);
+              // if (response.failureCount) session.remove();
+            })
+            .catch(function(error) {
+              console.log('Error sending message:', error);
+            });
+          }
+        });
       });
+    }
+  });
+};
+
+exports.pushNotify = function(type, receiver, res) {
+  Session
+  .find({ user: receiver })
+  .populate({ path: 'user', select: 'name picture gender language' })
+  .exec(function(err, sessions) {
+    if (err) return res.send(err);
+    sessions.forEach(function(session) {
+      if (session.registrationToken) {
+        var payload = {
+          notification: {
+            title: i18n[session.user.language][type].title,
+            body: i18n[session.user.language][type].message({ user: session.user })
+          }
+        };
+        admin.messaging().sendToDevice(session.registrationToken, payload)
+        .then(function(response) {
+          console.log('Successfully sent message:', response);
+          // if (response.failureCount) session.remove();
+        })
+        .catch(function(error) {
+          console.log('Error sending message:', error);
+        });
+      }
     });
   });
 }
+
+exports.remove = function(model, doc, res, callback = null, query = {}) {
+  query['item.model'] = model;
+  query['item.document'] = doc;
+  Notification.find(query).remove().exec(function(err, notifications) {
+    if (callback) callback(err, notifications);
+    else {
+      if (err) return res.send(err);
+      res.json({ success: true });
+    }
+  });
+};

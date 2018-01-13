@@ -27,12 +27,14 @@ exports.list = function(req, res) {
   .exec(function(err, notifications) {
     if (err) return res.send(err);
     notifications = notifications.map(function(notification) {
-      const user = notification.sender;
       return {
-        title: i18n[req.decoded.language][notification.type].title(user),
-        body: i18n[req.decoded.language][notification.type].body(user),
+        title: i18n[req.decoded.language][notification.type].title,
+        body: i18n[req.decoded.language][notification.type].body({ user: notification.sender }),
         user: user,
-        relativeTimestamp: moment(notification.createdAt).fromNow()
+        createdAt: moment(notification.createdAt).format('DD MMMM YYYY [at] HH:mm a'),
+        relativeCreateTimestamp: moment(notification.createdAt).fromNow(),
+        updatedAt: moment(notification.updatedAt).format('DD MMMM YYYY [at] HH:mm a'),
+        relativeUpdateTimestamp: moment(notification.updatedAt).fromNow()
       };
     });
     res.json({ success: true, data: { notifications: notifications } });

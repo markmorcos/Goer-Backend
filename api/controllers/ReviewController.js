@@ -3,6 +3,7 @@
 var mongoose = require('mongoose');
 var Review = mongoose.model('Review');
 var User = mongoose.model('User');
+var notifications = require('../../util/notifications');
 
 /**
  * @api {get} /api/reviews Read all reviews for a specific business
@@ -18,10 +19,10 @@ var User = mongoose.model('User');
  * @apiError {String} message Error message
  */
 exports.list = function(req, res) {
-  if (!req.query.id) return res.json({ success: false, message: 'ID is required' });
+  if (!req.query.id) return res.status(400).json({ success: false, message: 'ID is required' });
   User.findById(req.query.id, function(err, user) {
     if (err) return res.send(err);
-    if (!user || user.role !== 'business') return res.json({ success: false, message: 'Business not found' });
+    if (!user || user.role !== 'business') return res.status(404).json({ success: false, message: 'Business not found' });
     Review
     .find({ business: req.query.id, text: { $ne: null } })
     .populate({ path: 'user', select: 'name picture' })
@@ -50,14 +51,16 @@ exports.list = function(req, res) {
  * @apiError {String} message Error message
  */
 exports.create = function(req, res) {
-  if (!req.body.id) return res.json({ success: false, message: 'ID is required' });
-  if (!req.body.rating) return res.json({ success: false, message: 'Rating is required' });
+  if (!req.body.id) return res.status(400).json({ success: false, message: 'ID is required' });
+  if (!req.body.rating) return res.status(400).json({ success: false, message: 'Rating is required' });
   if ([1, 2, 3, 4, 5].indexOf(Number(req.body.rating)) === -1) {
-    return res.json({ success: false, message: 'Rating must be 1, 2, 3, 4 or 5' });
+    return res.status(400).json({ success: false, message: 'Rating must be 1, 2, 3, 4 or 5' });
   }
   User.findById(req.body.id, function(err, user) {
     if (err) return res.send(err);
-    if (!user || user.role !== 'business') return res.json({ success: false, message: 'Business not found' });
+    if (!user || user.role !== 'business') {
+      return res.status(404).json({ success: false, message: 'Business not found' });
+    }
     Review.findOne({ user: req.decoded._id, business: req.body.id, text: { $eq: null } }, function(err, review) {
       if (err) return res.send(err);
       if (review && !req.body.text) {
@@ -76,8 +79,21 @@ exports.create = function(req, res) {
           { $match: { business: mongoose.Types.ObjectId(req.body.id) } },
           { $group: { _id: '$business', rating: { $avg: '$rating' } } }
         ], function(err, reviews) {
+          if (err) return res.send(err);
           reviews.push({ rating: 0 });
-          res.json({ success: true, data: { rating: Math.round(reviews.shift().rating * 100) / 100 || 0 } });
+          notifications.notify(
+            'review',
+            req.decoded._id,
+            req.body.id,
+            'Review',
+            review._id,
+            res,
+            { push: true },
+            function(err, notification) {
+              if (err) return res.send(err);
+              res.json({ success: true, data: { rating: Math.round(reviews.shift().rating * 100) / 100 || 0 } });
+            }
+          );
         });
       });
     });
@@ -101,17 +117,19 @@ exports.create = function(req, res) {
  * @apiError {String} message Error message
  */
 exports.update = function(req, res) {
-  if (!req.body.id) return res.json({ success: false, message: 'ID is required' });
-  if (!req.body.rating) return res.json({ success: false, message: 'Rating is required' });
+  if (!req.body.id) return res.status(400).json({ success: false, message: 'ID is required' });
+  if (!req.body.rating) return res.status(400).json({ success: false, message: 'Rating is required' });
   if ([1, 2, 3, 4, 5].indexOf(Number(req.body.rating)) === -1) {
-    return res.json({ success: false, message: 'Rating must be 1, 2, 3, 4 or 5' });
+    return res.status(400).json({ success: false, message: 'Rating must be 1, 2, 3, 4 or 5' });
   }
   User.findById(req.body.id, function(err, user) {
     if (err) return res.send(err);
-    if (!user || user.role !== 'business') return res.json({ success: false, message: 'Business not found' });
+    if (!user || user.role !== 'business') {
+      return res.status(404).json({ success: false, message: 'Business not found' });
+    }
     Review.findOne({ $or: [{ _id: req.body.id }, { user: req.decoded._id, business: req.body.id }] }, function(err, review) {
       if (err) return res.send(err);
-      if (!review) return res.json({ success: false, message: 'Review not found' });
+      if (!review) return res.status(404).json({ success: false, message: 'Review not found' });
       review.rating = req.body.rating || review.rating;
       if (review._id == req.body.id) review.text = req.body.text || review.text;
       review.save(function(err, review) {
@@ -120,8 +138,21 @@ exports.update = function(req, res) {
           { $match: { business: review.business } },
           { $group: { _id: '$business', rating: { $avg: '$rating' } } }
         ], function(err, reviews) {
+          if (err) return res.send(err);
           reviews.push({ rating: 0 });
-          res.json({ success: true, data: { rating: Math.round(reviews.shift().rating * 100) / 100 || 0 } });
+          notifications.notify(
+            'review',
+            req.decoded._id,
+            req.body.id,
+            'Review',
+            review._id,
+            res,
+            { push: true },
+            function(err, notification) {
+              if (err) return res.send(err);
+              res.json({ success: true, data: { rating: Math.round(reviews.shift().rating * 100) / 100 || 0 } });
+            }
+          );
         });
       });
     });
@@ -142,21 +173,28 @@ exports.update = function(req, res) {
  * @apiError {String} message Error message
  */
 exports.delete = function(req, res) {
-  if (!req.body.id) return res.json({ success: false, message: 'ID is required' });
+  if (!req.body.id) return res.status(400).json({ success: false, message: 'ID is required' });
   User.findById(req.body.id, function(err, user) {
     if (err) return res.send(err);
-    if (!user || user.role !== 'business') return res.json({ success: false, message: 'Business not found' });
+    if (!user || user.role !== 'business') {
+      return res.status(404).json({ success: false, message: 'Business not found' });
+    }
     Review.findOne({ $or: [{ _id: req.body.id }, { user: req.decoded._id, business: req.body.id }] }, function(err, review) {
       if (err) return res.send(err);
-      if (!review) return res.json({ success: false, message: 'Review not found' });
+      if (!review) return res.status(404).json({ success: false, message: 'Review not found' });
       review.remove(function(err, review) {
         if (err) return res.send(err);
         Review.aggregate([
           { $match: { business: review.business } },
           { $group: { _id: '$business', rating: { $avg: '$rating' } } }
         ], function(err, reviews) {
+          if (err) return res.send(err);
           reviews.push({ rating: 0 });
-          res.json({ success: true, data: { review: Math.round(reviews.shift().rating * 100) / 100 || 0 } });
+          notifications.remove('Review', review._id, res, function(err, notification) {
+              if (err) return res.send(err);
+              res.json({ success: true, data: { rating: Math.round(reviews.shift().rating * 100) / 100 || 0 } });
+            }
+          );
         });
       });
     });

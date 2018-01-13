@@ -25,31 +25,31 @@ function generateNumber(length) {
 
 exports.validateNewUser = function(req, res, next) {
   var valid = true;
-  if (!req.body.email) valid = false, res.json({ success: false, message: 'Email is required' });
+  if (!req.body.email) valid = false, res.status(400).json({ success: false, message: 'Email is required' });
   User.findOne({ email: req.body.email }, function(err, user) {
     if (valid && err) valid = false, res.send(err);
-    if (valid && user) valid = false, res.json({ success: false, message: 'Email is already taken' });
+    if (valid && user) valid = false, res.status(400).json({ success: false, message: 'Email is already taken' });
     if (valid && !req.body.password) {
-      valid = false, res.json({ success: false, message: 'Password is required' });
+      valid = false, res.status(400).json({ success: false, message: 'Password is required' });
     }
     switch (req.body.role) {
       case 'user':
         if (valid && !req.body.firstName) {
-          valid = false, res.json({ success: false, message: 'First name is required' });
+          valid = false, res.status(400).json({ success: false, message: 'First name is required' });
         }
         if (valid && !req.body.lastName) {
-          valid = false, res.json({ success: false, message: 'Last name is required' });
+          valid = false, res.status(400).json({ success: false, message: 'Last name is required' });
         }
         break;
       case 'business':
         if (valid && !req.body.name) {
-          valid = false, res.json({ success: false, message: 'Name is required' });
+          valid = false, res.status(400).json({ success: false, message: 'Name is required' });
         }
         if (valid && !req.body.phone) {
-          valid = false, res.json({ success: false, message: 'Phone is required' });
+          valid = false, res.status(400).json({ success: false, message: 'Phone is required' });
         }
         if (valid && (!req.body.latitude || !req.body.longitude)) {
-          valid = false, res.json({ success: false, message: 'Location is required' });
+          valid = false, res.status(400).json({ success: false, message: 'Location is required' });
         }
         break;
     }
@@ -159,11 +159,11 @@ exports.signUp = function(req, res) {
  * @apiError {String} message Error message
  */
 exports.resendConfirmation = function(req, res) {
-  if (!req.body.id) return res.json({ success: false, message: 'ID is required' });
+  if (!req.body.id) return res.status(400).json({ success: false, message: 'ID is required' });
   User.findById(req.body.id, function(err, user) {
     if (err) return res.send(err);
-    if (!user) return res.json({ success: false, message: 'User not found' });
-    if (user.confirmed) return res.json({ success: false, message: 'User already confirmed' });
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    if (user.confirmed) return res.status(400).json({ success: false, message: 'User already confirmed' });
     sendConfirmation(user, function(err, data, response) {
       if (err) return res.send(err);
       res.json({ success: true });
@@ -185,14 +185,14 @@ exports.resendConfirmation = function(req, res) {
  * @apiError {String} message Error message
  */
 exports.confirmUser = function(req, res) {
-  if (!req.body.id) return res.json({ success: false, message: 'ID is required' });
-  if (!req.body.confirmation) return res.json({ success: false, message: 'Confirmation code is required' });
+  if (!req.body.id) return res.status(400).json({ success: false, message: 'ID is required' });
+  if (!req.body.confirmation) return res.status(400).json({ success: false, message: 'Confirmation code is required' });
   User.findById(req.body.id, function(err, user) {
     if (err) return res.send(err);
-    if (!user) return res.json({ success: false, message: 'User not found' });
-    if (user.confirmed) return res.json({ success: false, message: 'User already confirmed' });
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    if (user.confirmed) return res.status(400).json({ success: false, message: 'User already confirmed' });
     if (req.body.confirmation !== user.confirmation) {
-      return res.json({ success: false, message: 'Invalid confirmation code' });
+      return res.status(400).json({ success: false, message: 'Invalid confirmation code' });
     }
     user.confirmed = true;
     user.save(function(err, user) {
@@ -217,12 +217,12 @@ exports.confirmUser = function(req, res) {
  * @apiError {String} message Error message
  */
 exports.contactBusiness = function(req, res) {
-  if (!req.body.id) return res.json({ success: false, message: 'ID is required' });
-  if (!req.body.message) return res.json({ success: false, message: 'Message is required' });
+  if (!req.body.id) return res.status(400).json({ success: false, message: 'ID is required' });
+  if (!req.body.message) return res.status(400).json({ success: false, message: 'Message is required' });
   User.findById(req.body.id, function(err, user) {
     if (err) return res.send(err);
     if (!user || user.role !== 'business') {
-      return res.json({ success: false, message: 'Business not found' });
+      return res.status(404).json({ success: false, message: 'Business not found' });
     }
     client.sendEmail({
       to: user.email,
@@ -256,9 +256,9 @@ ${req.body.message}`,
  * @apiError {String} message Error message
  */
 exports.resetPassword = function(req, res) {
-  if (!req.body.email) return res.json({ success: false, message: 'Email is required' });
+  if (!req.body.email) return res.status(400).json({ success: false, message: 'Email is required' });
   User.findOne({ email: req.body.email }, function(err, user) {
-    if (!user) return res.json({ success: false, message: 'User not found' });
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
     const newPassword = String(generateNumber(8));
     user.password = bcrypt.hashSync(newPassword, 10);
     user.save(function(err, user) {
@@ -292,12 +292,12 @@ exports.resetPassword = function(req, res) {
  * @apiError {String} message Error message
  */
 exports.changePassword = function(req, res) {
-  if (!req.body.password) return res.json({ success: false, message: 'Password is required' });
+  if (!req.body.password) return res.status(400).json({ success: false, message: 'Password is required' });
   const user = req.decoded;
   bcrypt.compare(req.body.password, user.password, function(err, match) {
     if (err) return res.send(err);
-    if (!match) return res.json({ success: false, message: 'Incorrect password' });
-    if (!req.body.newPassword) return res.json({ success: false, message: 'New password is required' });
+    if (!match) return res.status(400).json({ success: false, message: 'Incorrect password' });
+    if (!req.body.newPassword) return res.status(400).json({ success: false, message: 'New password is required' });
     user.password = bcrypt.hashSync(req.body.newPassword, 10);
     user.save(function(err, user) {
       if (err) return res.send(err);
@@ -334,7 +334,7 @@ exports.changePassword = function(req, res) {
  * @apiError {String} message Error message
  */
 exports.search = function(req, res) {
-  if (!req.query.type) return res.json({ success: false, message: 'Type is required' });
+  if (!req.query.type) return res.status(400).json({ success: false, message: 'Type is required' });
   let query = req.query.query
   ? {
     $or: [
@@ -362,13 +362,13 @@ exports.search = function(req, res) {
       query.role = 'user';
       break;
     case 'tags':
-      if (!req.query.tags) return res.json({ success: false, message: 'Tags is required' });
+      if (!req.query.tags) return res.status(400).json({ success: false, message: 'Tags is required' });
       query.role = 'business';
       query.tags = { $in: req.query.tags.map(function(tag) { return mongoose.Types.ObjectId(tag); }) };
       break;
     case 'nearby':
       if (!req.query.latitude || !req.query.longitude) {
-        return res.json({ success: false, message: 'Location is required' });
+        return res.status(400).json({ success: false, message: 'Location is required' });
       }
       aggregate.unshift({
         $geoNear: {
@@ -380,7 +380,7 @@ exports.search = function(req, res) {
       query.role = 'business';
       break;
     default:
-      return res.json({ success: false, message: 'Type should be either people, tags or nearby' });
+      return res.status(400).json({ success: false, message: 'Type should be either people, tags or nearby' });
   }
   aggregate.push({ $match: query });
   aggregate.push({ $project: { name: true, picture: true } });
@@ -414,13 +414,13 @@ function getPrivateUser(user) {
  * @apiError {String} message Error message
  */
 exports.readProfile = function(req, res) {
-  if (!req.query.id) return res.json({ success: false, message: 'ID is required' });
+  if (!req.query.id) return res.status(400).json({ success: false, message: 'ID is required' });
   User
   .findById(req.query.id)
   .populate([{ path: 'tags', select: 'name' }])
   .exec(function(err, user) {
     if (err) return res.send(err);
-    if (!user) return res.json({ success: false, message: 'User not found' });
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
     if (user.private) {
       return res.json({ success: true, data: { user: getPrivateUser(user.toObject()) } });
     }
@@ -433,9 +433,9 @@ exports.validateExistingUser = function(req, res, next) {
   User
   .findById(req.body.id || req.decoded._id, function(err, user) {
     if (valid && err) valid = false, res.send(err);
-    if (valid && !user) valid = false, res.json({ success: false, message: 'User not found' });
+    if (valid && !user) valid = false, res.status(404).json({ success: false, message: 'User not found' });
     if (valid && req.decoded._id != user._id) {
-      valid = false, res.json({ success: false, message: 'You are not allowed to update this user' });
+      valid = false, res.status(403).json({ success: false, message: 'You are not allowed to update this user' });
     }
     if (!valid && req.file) return fs.delete(req.file.path);
     req.user = user;
@@ -516,70 +516,103 @@ exports.updateProfile = function(req, res) {
 
 exports.list = function(req, res) {
   if (req.decoded.role !== 'admin') {
-    return res.status(403).json({ success: false, message: 'You are not allowed to create admins' });
+    return res.status(403).json({ success: false, message: 'You are not allowed to list users' });
   }
-  User.find({}, { password: false }).sort('fullName').exec(function(err, admins) {
+  User.find({ role: 'user' }, { password: false }).sort('fullName').exec(function(err, users) {
     if (err) return res.send(err);
-    res.json({ success: true, data: admins });
+    res.json({ success: true, data: users });
   });
 };
 
 exports.create = function(req, res) {
   if (req.decoded.role !== 'admin') {
-    return res.status(403).json({ success: false, message: 'You are not allowed to list admins' });
+    return res.status(403).json({ success: false, message: 'You are not allowed to create users' });
   }
-  if (!req.body.name) return res.status(400).json({ success: false, message: 'Name is required' });
-  var admin = new Admin({ name: req.body.name });
-  admin.save(function(err, admin) {
+  if (!req.body.picture) return res.status(400).json({ success: false, message: 'Picture is required' });
+  if (!req.body.name.first) return res.status(400).json({ success: false, message: 'First name is required' });
+  if (!req.body.name.last) return res.status(400).json({ success: false, message: 'Last name is required' });
+  if (!req.body.email) return res.status(400).json({ success: false, message: 'Email is required' });
+  if (!req.body.password) return res.status(400).json({ success: false, message: 'Password is required' });
+  if (!req.body.confirmation) return res.status(400).json({ success: false, message: 'Confirmation is required' });
+  if (!req.body.approved) return res.status(400).json({ success: false, message: 'Approved is required' });
+  if (!req.body.confirmed) return res.status(400).json({ success: false, message: 'Confirmed is required' });
+  var user = new User({ 
+    role: 'user',
+    picture: req.body.picture,
+    name: req.body.name,
+    email: req.body.email,
+    password: bcrypt.hashSync(req.body.password, 10),
+    gender: req.body.gender,
+    birthdate: req.body.birthdate,
+    phone: req.body.phone,
+    confirmation: req.body.confirmation,
+    description: req.body.description,
+    language: req.body.language,
+    approved: req.body.approved,
+    confirmed: req.body.confirmed,
+    tags: req.body.tags
+  });
+  user.save(function(err, user) {
     if (err) return res.send(err);
-    res.json({ success: true, data: admin });
+    res.json({ success: true, data: user });
   });
 };
 
 exports.read = function(req, res) {
   if (req.decoded.role !== 'admin') {
-    return res.status(403).json({ success: false, message: 'You are not allowed to read admins' });
+    return res.status(403).json({ success: false, message: 'You are not allowed to read users' });
   }
   if (!req.params.id) return res.status(400).json({ success: false, message: 'ID is required' });
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-    return res.status(404).json({ success: false, message: 'Admin not found' });
+    return res.status(404).json({ success: false, message: 'User not found' });
   }
-  User.findById(req.params.id, { password: false }, function(err, admin) {
+  User.findById(req.params.id, { password: false }, function(err, user) {
     if (err) return res.send(err);
-    if (!admin) return res.status(404).json({ success: false, message: 'Admin not found' });
-    res.json({ success: true, data: admin });
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    res.json({ success: true, data: user });
   });
 };
 
 exports.update = function(req, res) {
   if (req.decoded.role !== 'admin') {
-    return res.status(403).json({ success: false, message: 'You are not allowed to update this admin' });
+    return res.status(403).json({ success: false, message: 'You are not allowed to update this user' });
   }
   if (!req.params.id) return res.status(400).json({ success: false, message: 'ID is required' });
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-    return res.status(404).json({ success: false, message: 'Admin not found' });
+    return res.status(404).json({ success: false, message: 'User not found' });
   }
-  User.findById(req.params.id, function(err, admin) {
-    if (!admin) return res.status(404).json({ success: false, message: 'Admin not found' });
-    admin.name = req.body.name || admin.name;
-    admin.save(function(err, admin) {
+  User.findById(req.params.id, function(err, user) {
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    user.picture = req.body.picture || user.picture;
+    user.name = req.body.name || user.name;
+    user.location = req.body.location || user.location;
+    user.email = req.body.email || user.email;
+    user.password = bcrypt.hashSync(req.body.password, 10) || user.password;
+    user.phone = req.body.phone || user.phone;
+    user.confirmation = req.body.confirmation || user.confirmation;
+    user.description = req.body.description || user.description;
+    user.language = req.body.language || user.language;
+    user.approved = req.body.approved || user.approved;
+    user.confirmed = req.body.confirmed || user.confirmed;
+    user.tags = req.body.tags;
+    user.save(function(err, user) {
       if (err) return res.send(err);
-      res.json({ success: true, data: admin });
+      res.json({ success: true, data: user });
     });
   });
 };
 
 exports.delete = function(req, res) {
-  if (req.decoded.role !== 'admin' && req.decoded._id === req.params.id) {
-    return res.stats(403).json({ success: false, message: 'You are not allowed to delete this admin' });
+  if (req.decoded.role !== 'admin') {
+    return res.status(403).json({ success: false, message: 'You are not allowed to delete this user' });
   }
   if (!req.params.id) return res.status(400).json({ success: false, message: 'ID is required' });
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-    return res.status(404).json({ success: false, message: 'Admin not found' });
+    return res.status(404).json({ success: false, message: 'User not found' });
   }
-  User.findByIdAndRemove(req.params.id, function(err, admin) {
+  User.findByIdAndRemove(req.params.id, function(err, user) {
     if (err) return res.send(err);
-    if (!admin) return res.status(404).json({ success: false, message: 'Admin not found' });
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
     res.json({ success: true });
   });
 };

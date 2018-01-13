@@ -4,7 +4,10 @@ var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 
 var Notification = new Schema({
-  type: String,
+  type: {
+  	type: String,
+  	enum: ['request', 'accept', 'reaction', 'review', 'comment', 'mention']
+  },
   sender: {
     type: Schema.Types.ObjectId,
     ref: 'User'
@@ -12,6 +15,17 @@ var Notification = new Schema({
   receiver: {
     type: Schema.Types.ObjectId,
     ref: 'User'
+  },
+  item: {
+    model: {
+      type: String,
+      enum: ['Follow', 'Reaction', 'Review', 'Post'],
+      default: 'Follow'
+    },
+    document: {
+      type: Schema.Types.ObjectId,
+      refPath: 'model'
+    }
   }
 }, { timestamps: true });
 

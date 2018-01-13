@@ -19,6 +19,8 @@ var Message = require('./models/Message');
 var Event = require('./models/Event');
 
 var sessions = require('./api/controllers/SessionController');
+var admins = require('./api/controllers/AdminController');
+var businesses = require('./api/controllers/BusinessController');
 var users = require('./api/controllers/UserController');
 var saves = require('./api/controllers/SaveController');
 var tags = require('./api/controllers/TagController');
@@ -149,7 +151,9 @@ module.exports = function(app) {
 	/* ----- */
 
 	const resources = [
-		{ name: 'admins', controller: users },
+		{ name: 'admins', controller: admins },
+		{ name: 'businesses', controller: businesses },
+		{ name: 'users', controller: users },
 		{ name: 'tags', controller: tags },
 		{ name: 'statics', controller: statics },
 		{ name: 'feedbacks', controller: feedbacks }

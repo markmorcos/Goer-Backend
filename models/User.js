@@ -10,10 +10,7 @@ var User = new Schema({
     default: 'user'
   },
   picture: String,
-  name: {
-    first: String,
-    last: String
-  },
+  name: Object,
   location: {
     type: [Number],
     index: '2dsphere'

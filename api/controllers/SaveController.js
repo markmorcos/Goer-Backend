@@ -19,9 +19,9 @@ var User = mongoose.model('User');
  */
 exports.list = function(req, res) {
   if (req.decoded.role !== 'user') {
-    return res.json({ success: false, message: 'You are not allowed to perform this action' });
+    return res.status(403).json({ success: false, message: 'You are not allowed to perform this action' });
   }
-  if (!req.query.type) return res.json({ success: false, message: 'Type is required' });
+  if (!req.query.type) return res.status(400).json({ success: false, message: 'Type is required' });
   Save
   .find({ user: req.decoded._id, type: req.query.type })
   .populate([
@@ -50,19 +50,19 @@ exports.list = function(req, res) {
  */
 exports.create = function(req, res) {
   if (req.decoded.role !== 'user') {
-    return res.json({ success: false, message: 'You are not allowed to perform this action' });
+    return res.status(403).json({ success: false, message: 'You are not allowed to perform this action' });
   }
-  if (!req.body.id) return res.json({ success: false, message: 'ID is required' });
-  if (!req.body.type) return res.json({ success: false, message: 'Type is required' });
+  if (!req.body.id) return res.status(400).json({ success: false, message: 'ID is required' });
+  if (!req.body.type) return res.status(400).json({ success: false, message: 'Type is required' });
   User.findById(req.body.id, function(err, user) {
     if (err) return res.send(err);
     if (!user || user.role !== 'business') {
-      return res.json({ success: false, message: 'Place not found' });
+      return res.status(404).json({ success: false, message: 'Place not found' });
     }
     Save.findOne({ user: req.decoded._id, business: user._id, type: req.body.type }, function(err, save) {
       if (err) return res.send(err);
       if (save) {
-        return res.json({ success: false, message: 'Place already saved' });
+        return res.status(400).json({ success: false, message: 'Place already saved' });
       }
       Save.create({ user: req.decoded._id, business: user._id, type: req.body.type }, function(err, save) {
         return res.json({ success: true, data: { save: save } });
@@ -87,19 +87,19 @@ exports.create = function(req, res) {
  */
 exports.delete = function(req, res) {
   if (req.decoded.role !== 'user') {
-    return res.json({ success: false, message: 'You are not allowed to perform this action' });
+    return res/status(403).json({ success: false, message: 'You are not allowed to perform this action' });
   }
-  if (!req.body.id) return res.json({ success: false, message: 'ID is required' });
-  if (!req.body.type) return res.json({ success: false, message: 'Type is required' });
+  if (!req.body.id) return res.status(400).json({ success: false, message: 'ID is required' });
+  if (!req.body.type) return res.status(400).json({ success: false, message: 'Type is required' });
   User.findById(req.body.id, function(err, user) {
     if (err) return res.send(err);
     if (!user || user.role !== 'business') {
-      return res.json({ success: false, message: 'Place not found' });
+      return res.status(404).json({ success: false, message: 'Place not found' });
     }
     Save.findOne({ user: req.decoded._id, business: user._id, type: req.body.type }, function(err, save) {
       if (err) return res.send(err);
       if (!save) {
-        return res.json({ success: false, message: 'Place already unsaved' });
+        return res.status(400).json({ success: false, message: 'Place already unsaved' });
       }
       save.remove(function(err, save) {
         res.json({ success: true });

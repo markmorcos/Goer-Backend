@@ -20,7 +20,7 @@ var notifications = require('../../util/notifications');
  * @apiError {String} message Error message
  */
 exports.list = function(req, res) {
-  if (!req.query.type) return res.json({ success: false, message: 'Type is required' });
+  if (!req.query.type) return res.status(400).json({ success: false, message: 'Type is required' });
   var key = req.query.type === 'followers' ? 'followee' : 'follower';
   var query = { status: req.query.type === 'requests' ? 'requested' : 'accepted' };
   query[key] = req.decoded._id;
@@ -49,24 +49,24 @@ exports.list = function(req, res) {
  * @apiError {String} message Error message
  */
 exports.follow = function(req, res) {
-  if (!req.body.id) return res.json({ success: false, message: 'ID is required' });
+  if (!req.body.id) return res.status(400).json({ success: false, message: 'ID is required' });
   if (req.decoded._id == req.body.id) {
-    return res.json({ success: false, message: 'You cannot perform this action' });
+    return res.status(403).json({ success: false, message: 'You cannot perform this action' });
   }
   Follow.findOne({ follower: req.decoded._id, followee: req.body.id }, function(err, follow) {
     if (err) return res.send(err);
     if (follow) {
       if (follow.status === 'requested') {
-        return res.json({ success: false, message: 'A request is already pending' });
+        return res.status(400).json({ success: false, message: 'A request is already pending' });
       }
       if (follow.status === 'accepted') {
-        return res.json({ success: false, message: 'You are already following this user' });
+        return res.status(400).json({ success: false, message: 'You are already following this user' });
       }
     }
     var newFollow = new Follow({ follower: req.decoded._id, followee: req.body.id });
     newFollow.save(function(err, follow) {
       if (err) return res.send(err);
-      notifications.notify('request', req.decoded._id, req.body.id, res);
+      notifications.notify('request', req.decoded._id, req.body.id, 'Follow', follow._id, res);
     });
   });
 };
@@ -85,19 +85,19 @@ exports.follow = function(req, res) {
  * @apiError {String} message Error message
  */
 exports.accept = function(req, res) {
-  if (!req.body.id) return res.json({ success: false, message: 'ID is required' });
+  if (!req.body.id) return res.status(400).json({ success: false, message: 'ID is required' });
   if (req.decoded._id == req.body.id) {
-    return res.json({ success: false, message: 'You cannot perform this action' });
+    return res.status(403).json({ success: false, message: 'You cannot perform this action' });
   }
   Follow.findOne({ follower: req.body.id, followee: req.decoded._id }, function(err, follow) {
-    if (!follow) return res.json({ success: false, message: 'Follow request not found' });
+    if (!follow) return res.status(404).json({ success: false, message: 'Follow request not found' });
     if (follow.status === 'accepted') {
-      return res.json({ success: false, message: 'Request already accepted' });
+      return res.status(400).json({ success: false, message: 'Request already accepted' });
     }
     follow.status = 'accepted';
     follow.save(function(err, follow) {
       if (err) return res.send(err);
-      notifications.notify('accept', req.decoded._id, req.body.id, res);
+      notifications.notify('accept', req.decoded._id, req.body.id, 'Follow', follow._id, res);
     });
   });
 };
@@ -116,9 +116,9 @@ exports.accept = function(req, res) {
  * @apiError {String} message Error message
  */
 exports.reject = function(req, res) {
-  if (!req.body.id) return res.json({ success: false, message: 'ID is required' });
+  if (!req.body.id) return res.status(400).json({ success: false, message: 'ID is required' });
   if (req.decoded._id == req.body.id) {
-    return res.json({ success: false, message: 'You cannot perform this action' });
+    return res.status(403).json({ success: false, message: 'You cannot perform this action' });
   }
   Follow.findOneAndRemove({
     follower: req.body.id,
@@ -126,7 +126,7 @@ exports.reject = function(req, res) {
     status: 'requested'
   }, function(err, follow) {
     if (err) return res.send(err);
-    if (!follow) return res.json({ success: false, message: 'Request does not exist' });
+    if (!follow) return res.status(404).json({ success: false, message: 'Request not found' });
     res.json({ success: true });
   });
 };
@@ -145,16 +145,16 @@ exports.reject = function(req, res) {
  * @apiError {String} message Error message
  */
 exports.delete = function(req, res) {
-  if (!req.body.id) return res.json({ success: false, message: 'ID is required' });
+  if (!req.body.id) return res.status(400).json({ success: false, message: 'ID is required' });
   if (req.decoded._id == req.body.id) {
-    return res.json({ success: false, message: 'You cannot perform this action' });
+    return res.status(403).json({ success: false, message: 'You cannot perform this action' });
   }
   Follow.findOneAndRemove({
     follower: req.decoded._id,
     followee: req.body.id
   }, function(err, follow) {
     if (err) return res.send(err);
-    if (!follow) return res.json({ success: false, message: 'Request does not exist' });
-    res.json({ success: true });
+    if (!follow) return res.status(404).json({ success: false, message: 'Request not found' });
+    notifications.remove('Follow', follow._id, res);
   });
 };
