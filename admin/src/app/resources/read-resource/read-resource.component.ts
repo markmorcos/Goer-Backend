@@ -26,7 +26,7 @@ export class ReadResourceComponent implements OnInit {
     this.model = this.route.parent.snapshot.params.model;
     this.route.parent.params.subscribe(params => {
       this.model = params.model;
-      this.fields = fields[params.model];
+      this.fields = fields[params.model].filter(field => field.type !== 'password');
     });
     this.resourceService.getResource(this.model, this.route.snapshot.params.id).subscribe(
       resource => {

@@ -8,10 +8,24 @@
         <th>ID</th>
         <td>{{ resource._id }}</td>
       </tr>
-      <tr *ngFor="let field of fields">
-        <th>{{ field.placeholder }}</th>
-        <td>{{ resource[field.name] }}</td>
-      </tr>
+        <ng-container *ngFor="let field of fields">
+          <ng-container [ngSwitch]="field.type">
+            <ng-container *ngSwitchCase="'object'">
+              <ng-container *ngFor="let objectField of field.fields">
+                <tr>
+                  <th>{{ objectField.placeholder }}</th>
+                  <td>{{ resource[field.name][objectField.name] }}</td>
+                </tr>
+              </ng-container>
+            </ng-container>
+            <ng-container *ngSwitchDefault>
+              <tr>
+                <th>{{ field.placeholder }}</th>
+                <td>{{ resource[field.name] }}</td>
+              </tr>
+            </ng-container>
+          </ng-container>
+        </ng-container>
     </tbody>
   </table>
   <a class="btn btn-primary btn-xs" routerLink="edit">Edit</a>

@@ -2,23 +2,24 @@
   <div *ngIf="loading">Loading...</div>
   <form *ngIf="!loading" (ngSubmit)="onSubmit()" [formGroup]="form">
     <div class="form-group">
-      <span *ngFor="let field of fields">
-        <label [for]="field.name">{{ field.placeholder }}</label>
-        <span [ngSwitch]="field.type">
-          <span *ngSwitchCase="'nested'">
-            <span *ngFor="let nestedField of field.nested">
-              <span [ngSwitch]="nestedField.type">
+      <ng-container *ngFor="let field of fields">
+        <ng-container [ngSwitch]="field.type">
+          <ng-container *ngSwitchCase="'object'">
+            <span *ngFor="let objectField of field.fields" [formGroupName]="field.name">
+              <ng-container [ngSwitch]="objectField.type">
+                <label [for]="objectField.name">{{ objectField.placeholder }}</label>
                 <input *ngSwitchCase="'text'"
                   type="text"
                   class="form-control"
-                  [id]="nestedField.name"
-                  [name]="nestedField.name"
-                  [placeholder]="nestedField.placeholder"
-                  [formControlName]="nestedField.name"
+                  [id]="objectField.name"
+                  [name]="objectField.name"
+                  [placeholder]="objectField.placeholder"
+                  [formControlName]="objectField.name"
                 />
-              </span>
+              </ng-container>
             </span>
-          </span>
+          </ng-container>
+          <label [for]="field.name">{{ field.placeholder }}</label>
           <input *ngSwitchCase="'text'"
             type="text"
             class="form-control"
@@ -42,6 +43,7 @@
             [name]="field.name"
             [placeholder]="field.placeholder"
             [formControlName]="field.name"
+            autocomplete="new-password" 
           />
           <textarea *ngSwitchCase="'textarea'"
             [id]="field.name"
@@ -61,8 +63,8 @@
               {{ option.value }}
             </option>
           </select>
-        </span>
-      </span>
+        </ng-container>
+      </ng-container>
     </div>
     <div class="form-group">
       <button *ngIf="action === 'add'" class="btn btn-success btn-xs" type="submit">Create</button>

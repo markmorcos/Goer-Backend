@@ -39,7 +39,7 @@ export class ListResourcesComponent implements OnInit {
   ngOnInit() {
     this.route.params.subscribe(params => {
       this.model = params.model;
-      this.fields = fields[params.model];
+      this.fields = fields[params.model].filter(field => field.list);
       this.resources = [];
       this.listResources();
     });

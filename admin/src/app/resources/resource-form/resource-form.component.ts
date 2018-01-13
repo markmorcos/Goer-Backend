@@ -30,7 +30,15 @@ export class ResourceFormComponent implements OnInit {
       this.fields = fields[params.model];
       const formGroup = {};
       for (const field of fields[params.model]) {
-        formGroup[field.name] = new FormControl('');
+        if (field.type === 'object') {
+          const objectFormGroup = {};
+          for (const objectField of field.fields) {
+            objectFormGroup[objectField.name] = new FormControl('');
+          }
+          formGroup[field.name] = new FormGroup(objectFormGroup);
+        } else {
+          formGroup[field.name] = new FormControl('');
+        }
       }
       this.form = new FormGroup(formGroup);
       const { id } = this.route.snapshot.params;

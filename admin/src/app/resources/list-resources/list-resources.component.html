@@ -3,7 +3,16 @@
     <thead>
       <tr>
         <th>ID</th>
-        <th *ngFor="let field of fields">{{ field.placeholder }}</th>
+        <ng-container *ngFor="let field of fields">
+          <ng-container [ngSwitch]="field.type">
+            <ng-container *ngSwitchCase="'object'">
+              <th *ngFor="let objectField of field.fields">{{ objectField.placeholder }}</th>
+            </ng-container>
+            <ng-container *ngSwitchDefault>
+              <th>{{ field.placeholder }}</th>
+            </ng-container>
+          </ng-container>
+        </ng-container>
         <th>Options</th>
       </tr>
     </thead>
@@ -12,7 +21,16 @@
       <tr *ngIf="!resources && !loading"><td colspan="2">No resources yet</td></tr>
       <tr *ngFor="let resource of resources">
         <td><a [routerLink]="[resource._id]">{{ resource._id }}</a></td>
-        <td *ngFor="let field of fields">{{ resource[field.name] }}</td>
+        <ng-container *ngFor="let field of fields">
+          <ng-container [ngSwitch]="field.type">
+            <ng-container *ngSwitchCase="'object'">
+              <td *ngFor="let objectField of field.fields">{{ resource[field.name][objectField.name] }}</td>
+            </ng-container>
+            <ng-container *ngSwitchDefault>
+              <td>{{ resource[field.name] }}</td>
+            </ng-container>
+          </ng-container>
+        </ng-container>
         <td>
           <a [routerLink]="[resource._id, 'edit']" class="btn btn-primary btn-xs">Edit</a>
           <a (click)="onDelete(resource._id)" class="btn btn-danger btn-xs">Delete</a>
