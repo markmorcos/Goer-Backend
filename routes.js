@@ -112,6 +112,7 @@ module.exports = function(app) {
 	app.delete('/api/reviews', verifyToken, reviews.delete);
 
 	// Comment
+	app.get('/api/comments', comments.list);
 	app.post('/api/comments', verifyToken, comments.create);
 	app.put('/api/comments', verifyToken, comments.update);
 	app.delete('/api/comments', verifyToken, comments.delete);

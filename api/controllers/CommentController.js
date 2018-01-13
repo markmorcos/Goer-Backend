@@ -4,6 +4,48 @@ var mongoose = require('mongoose');
 var Comment = mongoose.model('Comment');
 
 /**
+ * @api {get} /api/comments Read all comments for a specific post or review
+ * @apiName ReadComments
+ * @apiGroup Comment
+ *
+ * @apiParam {String} token Authentication token
+ * @apiParam {String} model Model name; Post or Review
+ * @apiParam {String} id Model ID
+ *
+ * @apiSuccess {Boolean} success true
+ *
+ * @apiError {Boolean} success false
+ * @apiError {String} message Error message
+ */
+exports.list = function(req, res) {
+  if (!req.query.model) return res.json({ success: false, message: 'Model is required' });
+  if (req.query.model !== 'Post' && req.query.model !== 'Review') {
+    return res.json({ success: false, mesage: 'Model must be either Post or Review' });
+  }
+  if (!req.query.id) return res.json({ success: false, message: 'ID is required' });
+  const Model = mongoose.model(req.query.model);
+  Model
+  .findOne({ _id: req.query.id })
+  .populate({ path: 'user', select: 'private' })
+  .exec(function(err, model) {
+    if (err) return res.send(err);
+    if (!model) return res.json({ success: false, message: `${req.query.model} not found` });
+    if (model.user.private) return res.json({ success: false, message: 'You are not allowed to view these comments' });
+    Comment
+    .find({ 'item.model': req.query.model, 'item.document': req.query.id })
+    .populate([
+      { path: 'user', select: 'name picture' },
+      { path: 'mentions', select: 'name picture' }
+    ])
+    .sort('-createAt')
+    .exec(function(err, comments) {
+      if (err) return res.send(err);
+      res.json({ success: true, data: { comments: comments } });
+    });
+  });
+};
+
+/**
  * @api {post} /api/comments Create new comment
  * @apiName CreateComment
  * @apiGroup Comment
