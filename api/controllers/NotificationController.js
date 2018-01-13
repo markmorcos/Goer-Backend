@@ -32,7 +32,7 @@ exports.list = function(req, res) {
         title: i18n[req.decoded.language][notification.type].title(user),
         body: i18n[req.decoded.language][notification.type].body(user),
         user: user,
-        relativeTime: moment(notification.createdAt).fromNow()
+        relativeTimestamp: moment(notification.createdAt).fromNow()
       };
     });
     res.json({ success: true, data: { notifications: notifications } });

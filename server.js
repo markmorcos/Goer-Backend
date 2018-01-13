@@ -3,13 +3,15 @@ dotenv.load();
 
 var express = require('express');
 var app = express();
-var port = process.env.PORT;
+var port = process.env.PORT || 3000;
 var morgan = require('morgan');
 var mongoose = require('mongoose');
 var bodyParser = require('body-parser');
 var spawn = require('child_process').spawn;
 var admin = require('firebase-admin');
 var path = require('path');
+var server = require('http').createServer(app);
+var io = require('socket.io')(server);
 
 var serviceAccount = require("./util/firebase-admin.json");
 admin.initializeApp({
@@ -31,14 +33,6 @@ app.get('/admin*', function(req, res) {
 
 app.use(express.static('public'));
 
-// app.all('*', function(req, res, next) {
-//   res.header("Access-Control-Allow-Origin", "*");
-//   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-//   res.header("Access-Control-Allow-Methods","PUT,POST,GET,DELETE,OPTIONS");
-//   res.header("Content-Type", "application/json;charset=utf-8");
-//   next();
-// });
-
 app.post('/deploy', function (req, res) {
   spawn('sh', ['./public/deploy.sh']);
   res.json({ success: true });
@@ -51,5 +45,10 @@ app.use(function(req, res) {
   return res.status(404).send({ error: req.method + ' ' + req.originalUrl + ' not found' })
 });
 
-app.listen(port);
-console.log('RESTful API server started on: ' + port);
+io.on('connection', function(client) {
+    console.log('Client connected...');
+});
+
+server.listen(port, function() {
+	console.log('RESTful API server started on: ' + port);
+});

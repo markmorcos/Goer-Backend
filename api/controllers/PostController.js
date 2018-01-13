@@ -14,26 +14,22 @@ function populatePosts(query, userId, page = 1) {
   return Post
   .aggregate([
     { $match: query },
-    { $lookup: { from: 'comments', localField: '_id', foreignField: 'item.document', as: 'comments' } },
-    { $unwind: { path: '$comments', preserveNullAndEmptyArrays: true } },
-    { $lookup: { from: 'users', localField: 'comments.user', foreignField: '_id', as: 'comments.user' } },
     { $lookup: { from: 'reactions', localField: '_id', foreignField: 'item.document', as: 'reactions' } },
     { $lookup: { from: 'users', localField: 'user', foreignField: '_id', as: 'user' } },
     { $unwind: '$user' },
     { $lookup: { from: 'users', localField: 'business', foreignField: '_id', as: 'business' } },
-    { $unwind: '$business' },
+    { $unwind: { path: '$business', preserveNullAndEmptyArrays: true } },
     { $lookup: { from: 'users', localField: 'mentions', foreignField: '_id', as: 'mentions' } },
     { $unwind: '$mentions' },
     {
       $project: {
         user: { _id: true, name: true, picture: true },
-        business: { _id: true, name: true, picture: true },
+        business: { _id: true, name: true },
         title: true,
         location: true,
         text: true,
         pictures: true,
         mentions: { _id: true, name: true, picture: true },
-        comments: { _id: true, text: true, user: { name: true, picture: true } },
         reactionCount: {
           likes: {
             $size: {
@@ -69,9 +65,6 @@ function populatePosts(query, userId, page = 1) {
     { $unwind: '$reactionCount' },
     { $unwind: '$mentions.name' },
     { $unwind: '$mentions.picture' },
-    { $unwind: '$comments.user' },
-    { $unwind: '$comments.user.name' },
-    { $unwind: '$comments.user.picture' },
     {
       $group: {
         _id: '$_id',
@@ -82,7 +75,6 @@ function populatePosts(query, userId, page = 1) {
         text: { $first: '$text' },
         pictures: { $first: '$pictures' },
         mentions: { $push: '$mentions' },
-        comments: { $push: '$comments' },
         reactions: { $first: '$reactionCount' },
         reaction: { $first: '$reaction.type' },
         createdAt: { $first: '$createdAt' },
@@ -93,6 +85,14 @@ function populatePosts(query, userId, page = 1) {
     { $limit: constants.perPage },
   ]);
 };
+
+function configureTimestamps(post) {
+  post.relativeCreateTimestamp = moment(post.createdAt).fromNow();
+  post.createdAt = moment(post.createdAt).format('DD MMMM YYYY [at] hh:mm a');
+  post.relativeCreateTimestamp = moment(post.updatedAt).fromNow();
+  post.updatedAt = moment(post.updatedAt).format('DD MMMM YYYY [at] hh:mm a');
+  return post;
+}
 
 /**
  * @api {get} /api/feed Read feed of a specific user
@@ -116,14 +116,7 @@ exports.feed = function(req, res) {
     .exec(function(err, posts) {
       if (err) return res.send(err);
       moment.locale(req.decoded.language);
-      res.json({
-        success: true,
-        posts: posts.map(function(post) {
-          post.createdAt = moment(post.createdAt).format('DD MMMM YYYY');
-          post.relativeTime = moment(post.createdAt).fromNow();
-          return post;
-        })
-      });
+      res.json({ success: true, data: { posts: posts.map(configureTimestamps) } });
     });
   });
 };
@@ -134,7 +127,7 @@ exports.feed = function(req, res) {
  * @apiGroup Post
  *
  * @apiParam {String} token Authentication token
- * @apiParam {String} id User ID
+ * @apiParam {String} id User ID (optional, default: current user ID)
  * @apiParam {String} page Page (optional, default: 1)
  *
  * @apiSuccess {Boolean} success true
@@ -144,8 +137,7 @@ exports.feed = function(req, res) {
  * @apiError {String} message Error message
  */
 exports.list = function(req, res) {
-  if (!req.query.id) return res.json({ success: false, message: 'ID is required' });
-  User.findById(req.query.id, function(err, user) {
+  User.findById(req.query.id || req.decoded._id, function(err, user) {
     if (err) return res.send(err);
     if (!user) return res.json({ success: false, message: 'User not found' });
     Follow.findOne({ follower: req.decoded._id, followee: user._id, status: 'accepted' }, function(err, follow) {
@@ -156,14 +148,7 @@ exports.list = function(req, res) {
       populatePosts({ user: user._id }, req.decoded._id, req.query.page).exec(function(err, posts) {
         if (err) return res.send(err);
         moment.locale(req.decoded.language);
-        res.json({
-          success: true,
-          posts: posts.map(function(post) {
-            post.createdAt = moment(post.createdAt).format('DD MMMM YYYY');
-            post.relativeTime = moment(post.createdAt).fromNow();
-            return post;   
-          })
-        });
+        res.json({ success: true, data: { posts: posts.map(configureTimestamps) } });
       });
     });
   });
@@ -189,7 +174,7 @@ function populatePost(req, res, next) {
     user: req.decoded._id,
     business: req.body.business,
     title: req.body.title,
-    location: { latitude: req.body.latitude, longitude: req.body.longitude },
+    location: [req.body.latitude, req.body.longitude],
     text: req.body.text,
     pictures: [],
     mentions: req.body.mentions || [],
@@ -258,16 +243,10 @@ exports.create = function(req, res) {
  */
 exports.read = function(req, res) {
   if (!req.query.id) return res.json({ success: false, message: 'ID is required' });
-  Post
-  .findById(req.query.id)
-  .populate([
-    { path: 'user', select: 'name picture private' },
-    { path: 'business', select: 'name picture' },
-    { path: 'mentions', select: 'name picture' }
-  ])
-  .exec(function(err, post) {
+  populatePosts({ _id: mongoose.Types.ObjectId(req.query.id) }, req.decoded._id, 1).exec(function(err, posts) {
     if (err) return res.send(err);
-    if (!post) return res.json({ success: false, message: 'Post not found' });
+    if (!posts.length) return res.json({ success: false, message: 'Post not found' });
+    const post = posts[0];
     if (req.decoded._id != post.user._id && post.user.private) {
       return res.json({ success: false, message: 'This post is private' });
     }
@@ -278,17 +257,10 @@ exports.read = function(req, res) {
 exports.validateExistingPost = function(req, res, next) {
   if (!req.body.id) return res.json({ success: false, message: 'ID is required' });
   var valid = true;
-  Post
-  .findById(req.body.id)
-  .populate([
-    { path: 'user', select: 'name picture private' },
-    { path: 'business', select: 'name picture' },
-    { path: 'mentions', select: 'name picture' }
-  ])
-  .exec(function(err, post) {
+  Post.findById(req.body.id, function(err, post) {
     if (valid && err) valid = false, res.send(err);
     if (valid && !post) valid = false, res.json({ success: false, message: 'Post not found' });
-    if (valid && req.decoded._id != String(post.user._id)) {
+    if (valid && req.decoded._id != String(post.user)) {
       valid = false, res.json({ success: false, message: 'You are not allowed to update this post' });
     }
     if (!valid) return req.files.forEach(function(file) { fs.delete(file.path); });    
@@ -307,7 +279,7 @@ exports.validateExistingPost = function(req, res, next) {
  * @apiParam {String} business Business ID (optional)
  * @apiParam {String} title Place name in case business ID is empty (optional)
  * @apiParam {String} latitude Location latitude (optional)
- * @apiParam {String} location Location longitude (optional)
+ * @apiParam {String} longitude Location longitude (optional)
  * @apiParam {String} text Post text (optional)
  * @apiParam {Array} pictures Pictures (optional)
  * @apiParam {Array} mentions Mentions (optional)
@@ -322,7 +294,9 @@ exports.update = function(req, res) {
   const post = req.post;
   post.business = req.body.business || post.business;
   post.title = req.body.title || post.title;
-  post.location = req.body.location || post.location;
+  post.location = req.body.latitude && req.body.longitude
+  ? [req.body.latitude, req.body.longitude]
+  : post.location;
   post.text = req.body.text || post.text;
   post.pictures = req.body.pictures === undefined ? post.pictures : req.body.pictures || [];
   post.mentions = req.body.mentions === undefined ? post.mentions : req.body.mentions || [];
@@ -340,15 +314,10 @@ exports.update = function(req, res) {
   });
   post.save(function(err, post) {
     if (err) return res.send(err);
-    Post
-    .populate(post, [
-      { path: 'user', select: 'name picture private' },
-      { path: 'business', select: 'name picture' },
-      { path: 'mentions', select: 'name picture' }
-    ], function(err, post) {
+    populatePosts({ _id: post._id }, req.decoded._id, 1).exec(function(err, posts) {
       if (err) return res.send(err);
-      res.json({ success: true, data: { post: post } });
-    })
+      res.json({ success: true, data: { post: posts[0] } });
+    });
   });
 };
 

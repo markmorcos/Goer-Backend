@@ -14,8 +14,8 @@ var Post = new Schema({
   },
   title: String,
   location: {
-    latitude: Number,
-    longitude: Number
+    type: [Number],
+    index: '2dsphere'
   },
   text: String,
   pictures: [String],

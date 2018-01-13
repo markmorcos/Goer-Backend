@@ -16,6 +16,7 @@ var Static = require('./models/Static');
 var Feedback = require('./models/Feedback');
 var Thread = require('./models/Thread');
 var Message = require('./models/Message');
+var Event = require('./models/Event');
 
 var sessions = require('./api/controllers/SessionController');
 var users = require('./api/controllers/UserController');
@@ -31,6 +32,7 @@ var statics = require('./api/controllers/StaticController');
 var feedbacks = require('./api/controllers/FeedbackController');
 var threads = require('./api/controllers/ThreadController');
 var messages = require('./api/controllers/MessageController');
+var events = require('./api/controllers/EventController');
 
 function verifyToken(req, res, next) {
   var token = req.body.token || req.query.token || req.params.token || req.headers['x-access-token'];
@@ -132,6 +134,14 @@ module.exports = function(app) {
 	// Message
 	app.post('/api/messages', verifyToken, messages.create);
 	app.get('/api/messages', verifyToken, messages.list);
+
+	// Event
+	app.get('/api/events', verifyToken, events.list);
+	app.post('/api/events', verifyToken, events.create);
+	app.get('/api/event', verifyToken, events.read);
+	app.put('/api/events', verifyToken, events.update);
+	app.delete('/api/events', verifyToken, events.delete);
+	app.put('/api/rsvp-event', verifyToken, events.rsvp);
 
 	/* ----- */
 	/* ADMIN */
