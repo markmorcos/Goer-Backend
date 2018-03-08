@@ -75,7 +75,8 @@ function populateUser(req, res, next) {
     description: req.body.description,
     language: req.body.language,
     approved: req.body.role !== 'business',
-    facebook: req.body.facebook
+    facebook: req.body.facebook,
+    role: req.body.role
   });
   if (req.file) {
     const directory = `uploads/users/${user._id}/picture`;
