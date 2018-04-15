@@ -69,6 +69,7 @@ export class ResourceFormComponent implements OnInit {
     const { id } = this.route.snapshot.params;
     this.resourceService.saveResource(this.model, id, this.form.value).subscribe(
       resource => {
+        console.log(resource)
         this.constantService.setError('');
         this.loading = false;
         this.router.navigate(['/', this.model, resource._id], { relativeTo: this.route });

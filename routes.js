@@ -75,7 +75,7 @@ module.exports = function(app) {
     app.post('/api/contact-business', verifyToken, users.contactBusiness)
     app.post('/api/reset-password', users.resetPassword)
     app.get('/api/search', users.search)
-    app.get('/api/read-profile', verifyToken, users.readProfile)
+    app.get('/api/read-profile', users.readProfile)
     app.put(
         '/api/update-profile',
         upload.single('picture'),

@@ -52,6 +52,15 @@ exports.en = {
         message: function(options) {
             return `${options.user.fullName} mentioned you in a ${options.model.toLowerCase()}`
         }
+    },
+    message: {
+        title: 'New Message',
+        body: function(options) {
+            return `[[${options.user._id}]] sent you a message`
+        },
+        message: function(options) {
+            return `${options.user.fullName} sent you a message`
+        }
     }
 }
 
@@ -102,6 +111,15 @@ exports.in = {
         }
     },
     mention: {
+        title: '',
+        body: function(options) {
+            return ''
+        },
+        message: function(options) {
+            return ''
+        }
+    },
+    message: {
         title: '',
         body: function(options) {
             return ''

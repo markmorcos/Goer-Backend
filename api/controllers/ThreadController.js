@@ -4,6 +4,8 @@ var mongoose = require('mongoose')
 var Thread = mongoose.model('Thread')
 var Message = mongoose.model('Message')
 
+var notifications = require('../../util/notifications')
+
 /**
  * @api {get} /api/threads Read all threads
  * @apiName ReadThreads
@@ -32,6 +34,9 @@ function sendMessage(thread, req, res) {
     message.save(function(err, message) {
         if (err) return res.send(err)
         Thread.populate(thread, { path: 'users', select: 'name picture' }, function(err, thread) {
+            thread.users.forEach(function(user) {
+                if (user._id != req.decoded._id) notifications.pushNotify('message', user._id, res)
+            })
             res.json({ success: true, data: { thread: thread } })
         })
     })

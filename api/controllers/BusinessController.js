@@ -18,7 +18,6 @@ exports.create = function(req, res) {
     if (req.decoded.role !== 'admin') {
         return res.status(403).json({ success: false, message: 'You are not allowed to create businesss' })
     }
-    if (!req.body.picture) return res.status(400).json({ success: false, message: 'Picture is required' })
     if (!req.body.name) return res.status(400).json({ success: false, message: 'Name is required' })
     if (!req.body.location) return res.status(400).json({ success: false, message: 'Location is required' })
     if (!req.body.email) return res.status(400).json({ success: false, message: 'Email is required' })
@@ -32,7 +31,7 @@ exports.create = function(req, res) {
         role: 'business',
         picture: req.body.picture,
         name: req.body.name,
-        location: req.body.location,
+        location: req.body.location.split(','),
         email: req.body.email,
         password: bcrypt.hashSync(req.body.password, 10),
         phone: req.body.phone,
@@ -40,8 +39,8 @@ exports.create = function(req, res) {
         description: req.body.description,
         language: req.body.language,
         approved: req.body.approved,
-        confirmed: req.body.confirmed,
-        tags: req.body.tags
+        confirmed: req.body.confirmed || true,
+        tags: req.body.tags || []
     })
     business.save(function(err, business) {
         if (err) return res.send(err)

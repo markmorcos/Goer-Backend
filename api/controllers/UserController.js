@@ -2,6 +2,7 @@
 
 var mongoose = require('mongoose')
 var User = mongoose.model('User')
+var Follow = mongoose.model('Follow')
 var bcrypt = require('bcrypt')
 var multer = require('multer')
 var axios = require('axios')
@@ -421,7 +422,7 @@ exports.search = function(req, res) {
 }
 
 function getPrivateUser(user) {
-    const keys = ['picture', 'name', 'email']
+    const keys = ['picture', 'name', 'email', 'followers', 'following']
     const newUser = {}
     keys.forEach(function(key) {
         newUser[key] = user[key]
@@ -450,10 +451,21 @@ exports.readProfile = function(req, res) {
         .exec(function(err, user) {
             if (err) return res.send(err)
             if (!user) return res.status(404).json({ success: false, message: 'User not found' })
-            if (user.private) {
-                return res.json({ success: true, data: { user: getPrivateUser(user.toObject()) } })
-            }
-            res.json({ success: true, data: { user: user } })
+            Follow.find({ followee: user._id, status: 'accepted' }, function(err, followers) {
+                Follow.find({ follower: user._id, status: 'accepted' }, function(err, following) {
+                    user = user.toObject()
+                    user.followers = followers.length
+                    user.following = following.length
+                    user.isFollowed =
+                        followers.filter(function(follower) {
+                            return req.decoded && follower.follower == req.decoded._id
+                        }).length > 0
+                    if (req.decoded && req.decoded._id != user._id && user.private) {
+                        return res.json({ success: true, data: { user: getPrivateUser(user.toObject()) } })
+                    }
+                    res.json({ success: true, data: { user: user } })
+                })
+            })
         })
 }
 
@@ -561,10 +573,10 @@ exports.create = function(req, res) {
     if (req.decoded.role !== 'admin') {
         return res.status(403).json({ success: false, message: 'You are not allowed to create users' })
     }
-    if (!req.body.picture) return res.status(400).json({ success: false, message: 'Picture is required' })
-    if (!req.body.name.first)
+    if (!req.body.name && !req.body.name.first)
         return res.status(400).json({ success: false, message: 'First name is required' })
-    if (!req.body.name.last) return res.status(400).json({ success: false, message: 'Last name is required' })
+    if (!req.body.name && !req.body.name.last)
+        return res.status(400).json({ success: false, message: 'Last name is required' })
     if (!req.body.email) return res.status(400).json({ success: false, message: 'Email is required' })
     if (!req.body.password) return res.status(400).json({ success: false, message: 'Password is required' })
     if (!req.body.confirmation)
@@ -585,7 +597,7 @@ exports.create = function(req, res) {
         language: req.body.language,
         approved: req.body.approved,
         confirmed: req.body.confirmed,
-        tags: req.body.tags
+        tags: req.body.tags || []
     })
     user.save(function(err, user) {
         if (err) return res.send(err)
