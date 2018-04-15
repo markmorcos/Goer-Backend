@@ -1,8 +1,8 @@
-'use strict';
+'use strict'
 
-var mongoose = require('mongoose');
-var Save = mongoose.model('Save');
-var User = mongoose.model('User');
+var mongoose = require('mongoose')
+var Save = mongoose.model('Save')
+var User = mongoose.model('User')
 
 /**
  * @api {get} /api/saves Get saved businesses for a specific list
@@ -18,20 +18,16 @@ var User = mongoose.model('User');
  * @apiError {String} message Error message
  */
 exports.list = function(req, res) {
-  if (req.decoded.role !== 'user') {
-    return res.status(403).json({ success: false, message: 'You are not allowed to perform this action' });
-  }
-  if (!req.query.type) return res.status(400).json({ success: false, message: 'Type is required' });
-  Save
-  .find({ user: req.decoded._id, type: req.query.type })
-  .populate([
-    { path: 'user', select: 'name picture' },
-    { path: 'business', select: 'name picture' }
-  ])
-  .exec(function(err, saves) {
-    if (err) return res.send(err);
-    res.json({ success: true, data: { saves: saves } });
-  });
+    if (req.decoded.role !== 'user') {
+        return res.status(403).json({ success: false, message: 'You are not allowed to perform this action' })
+    }
+    if (!req.query.type) return res.status(400).json({ success: false, message: 'Type is required' })
+    Save.find({ user: req.decoded._id, type: req.query.type })
+        .populate([{ path: 'user', select: 'name picture' }, { path: 'business', select: 'name picture' }])
+        .exec(function(err, saves) {
+            if (err) return res.send(err)
+            res.json({ success: true, data: { saves: saves } })
+        })
 }
 
 /**
@@ -49,26 +45,29 @@ exports.list = function(req, res) {
  * @apiError {String} message Error message
  */
 exports.create = function(req, res) {
-  if (req.decoded.role !== 'user') {
-    return res.status(403).json({ success: false, message: 'You are not allowed to perform this action' });
-  }
-  if (!req.body.id) return res.status(400).json({ success: false, message: 'ID is required' });
-  if (!req.body.type) return res.status(400).json({ success: false, message: 'Type is required' });
-  User.findById(req.body.id, function(err, user) {
-    if (err) return res.send(err);
-    if (!user || user.role !== 'business') {
-      return res.status(404).json({ success: false, message: 'Place not found' });
+    if (req.decoded.role !== 'user') {
+        return res.status(403).json({ success: false, message: 'You are not allowed to perform this action' })
     }
-    Save.findOne({ user: req.decoded._id, business: user._id, type: req.body.type }, function(err, save) {
-      if (err) return res.send(err);
-      if (save) {
-        return res.status(400).json({ success: false, message: 'Place already saved' });
-      }
-      Save.create({ user: req.decoded._id, business: user._id, type: req.body.type }, function(err, save) {
-        return res.json({ success: true, data: { save: save } });
-      });
-    });
-  });
+    if (!req.body.id) return res.status(400).json({ success: false, message: 'ID is required' })
+    if (!req.body.type) return res.status(400).json({ success: false, message: 'Type is required' })
+    User.findById(req.body.id, function(err, user) {
+        if (err) return res.send(err)
+        if (!user || user.role !== 'business') {
+            return res.status(404).json({ success: false, message: 'Place not found' })
+        }
+        Save.findOne({ user: req.decoded._id, business: user._id, type: req.body.type }, function(err, save) {
+            if (err) return res.send(err)
+            if (save) {
+                return res.status(400).json({ success: false, message: 'Place already saved' })
+            }
+            Save.create({ user: req.decoded._id, business: user._id, type: req.body.type }, function(
+                err,
+                save
+            ) {
+                return res.json({ success: true, data: { save: save } })
+            })
+        })
+    })
 }
 
 /**
@@ -86,24 +85,26 @@ exports.create = function(req, res) {
  * @apiError {String} message Error message
  */
 exports.delete = function(req, res) {
-  if (req.decoded.role !== 'user') {
-    return res/status(403).json({ success: false, message: 'You are not allowed to perform this action' });
-  }
-  if (!req.body.id) return res.status(400).json({ success: false, message: 'ID is required' });
-  if (!req.body.type) return res.status(400).json({ success: false, message: 'Type is required' });
-  User.findById(req.body.id, function(err, user) {
-    if (err) return res.send(err);
-    if (!user || user.role !== 'business') {
-      return res.status(404).json({ success: false, message: 'Place not found' });
+    if (req.decoded.role !== 'user') {
+        return (
+            res / status(403).json({ success: false, message: 'You are not allowed to perform this action' })
+        )
     }
-    Save.findOne({ user: req.decoded._id, business: user._id, type: req.body.type }, function(err, save) {
-      if (err) return res.send(err);
-      if (!save) {
-        return res.status(400).json({ success: false, message: 'Place already unsaved' });
-      }
-      save.remove(function(err, save) {
-        res.json({ success: true });
-      });
-    });
-  });
+    if (!req.body.id) return res.status(400).json({ success: false, message: 'ID is required' })
+    if (!req.body.type) return res.status(400).json({ success: false, message: 'Type is required' })
+    User.findById(req.body.id, function(err, user) {
+        if (err) return res.send(err)
+        if (!user || user.role !== 'business') {
+            return res.status(404).json({ success: false, message: 'Place not found' })
+        }
+        Save.findOne({ user: req.decoded._id, business: user._id, type: req.body.type }, function(err, save) {
+            if (err) return res.send(err)
+            if (!save) {
+                return res.status(400).json({ success: false, message: 'Place already unsaved' })
+            }
+            save.remove(function(err, save) {
+                res.json({ success: true })
+            })
+        })
+    })
 }

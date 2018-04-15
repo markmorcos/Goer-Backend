@@ -1,10 +1,10 @@
-'use strict';
+'use strict'
 
-var mongoose = require('mongoose');
-var Schema = mongoose.Schema;
+var mongoose = require('mongoose')
+var Schema = mongoose.Schema
 
 var Tag = new Schema({
-  name: String
-});
+    name: String
+})
 
-module.exports = mongoose.model('Tag', Tag);
+module.exports = mongoose.model('Tag', Tag)

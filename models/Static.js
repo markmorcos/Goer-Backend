@@ -1,12 +1,12 @@
-'use strict';
+'use strict'
 
-var mongoose = require('mongoose');
-var Schema = mongoose.Schema;
+var mongoose = require('mongoose')
+var Schema = mongoose.Schema
 
 var Static = new Schema({
-  slug: String,
-  title: String,
-  text: String
-});
+    slug: String,
+    title: String,
+    text: String
+})
 
-module.exports = mongoose.model('Static', Static);
+module.exports = mongoose.model('Static', Static)
