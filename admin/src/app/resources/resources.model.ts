@@ -27,7 +27,7 @@ export const admins = [
     name: 'password',
     placeholder: 'Password'
   }
-];
+]
 
 export const businesses = [
   {
@@ -95,7 +95,7 @@ export const businesses = [
     name: 'tags',
     placeholder: 'Tags'
   }
-];
+]
 
 export const users = [
   {
@@ -177,15 +177,16 @@ export const users = [
     name: 'tags',
     placeholder: 'Tags'
   }
-];
+]
 
 export const tags = [
   {
     type: 'text',
     name: 'name',
-    placeholder: 'Name'
+    placeholder: 'Name',
+    list: true
   }
-];
+]
 
 export const statics = [
   {
@@ -203,7 +204,7 @@ export const statics = [
     name: 'text',
     placeholder: 'Text'
   }
-];
+]
 
 export const feedbacks = [
   {
@@ -216,4 +217,4 @@ export const feedbacks = [
     name: 'text',
     placeholder: 'Text'
   }
-];
+]
